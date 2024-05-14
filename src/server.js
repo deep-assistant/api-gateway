@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const { queryChatGPT } = require('./api/chatgpt');
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT;
 
 app.use(bodyParser.json());
 
