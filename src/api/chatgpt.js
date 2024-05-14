@@ -1,56 +1,49 @@
 const axios = require('axios');
-const { AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY, YOUR_DEPLOYMENT_NAME } = require('../config');
-const { validateAndUpdateTokensUsage } = require('../utils/tokenManager');
+const { validateAndUpdateTokensUsage, loadTokensData } = require('../utils/tokenManager');
 
 
 // Замените на свои данные
 const deploymentConfig = {
   'gpt-4-128k': {
-      deploymentName: 'gpt-4-128k',
-      modelName: 'gpt-4-128k',
-      endpoint: AZURE_OPENAI_ENDPOINT,
-      apiKey: AZURE_OPENAI_KEY,
-      apiVersion: '2023-07-01-preview'
+      modelName: process.env.GPT_MODEL_NAME,
+      endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+      apiKey: process.env.AZURE_OPENAI_KEY,
+      apiVersion: process.env.GPT_VERSION
   }
 };
-
 async function queryChatGPT(userQuery, token) {
-  const model = 'gpt-4-128k';
+  const model = process.env.GPT_MODEL_NAME;
   const config = deploymentConfig[model];
   if (!config) {
-      console.error(`Deployment config for ${model} not found`);
+      console.error(`Deployment config for ${config} not found`);
       return;
   }
-
-  const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`
-  };
-
-  const data = {
-      'max_tokens': 1000,
-      'temperature': 0.8,
-      'top_p': 1,
-      'presence_penalty': 1,
-      'messages': [
-          {
-              'role': 'system',
-              'content': 'You are chatting with an AI assistant.'
-          },
-          {
-              'role': 'user',
-              'content': userQuery
-          }
-      ],
-      'stream': true
-  };
+  const validLimitToken = await loadTokensData();
+  const tokenBounded = validLimitToken.tokens.find(t => t.token === token);
+  if (tokenBounded.used.user > tokenBounded.limits.user || 
+    tokenBounded.used.chatGpt > tokenBounded.limits.chatGpt) {
+    throw new Error('Превышен лимит использования токенов.');
+}   
 
   try {
-      const response = await axios.post(`${config.endpoint}/openai/deployments/${config.deploymentName}/chat/completions?api-version=${config.apiVersion}`, data, { headers });
-      console.log(response.data.choices[0].message.content.trim())
-      const requestTokensUsed = response.data.usage.total_request_tokens;
-      const responseTokensUsed = response.data.usage.total_response_tokens;
-      console.log(requestTokensUsed)
+    const endpointAll = `${config.endpoint}/openai/deployments/${config.modelName}/chat/completions?api-version=${config.apiVersion}`;
+    const response = await axios.post(endpointAll, {
+        messages: [{
+            'role': 'system',
+            'content': 'You are chatting with an AI assistant.'
+        },
+        {
+            'role': 'user',
+            'content': userQuery
+        }]
+    }, {
+        headers: {
+        'Content-Type': 'application/json',
+        'api-key': config.apiKey
+        }
+    });
+      const requestTokensUsed = response.data.usage.prompt_tokens;
+      const responseTokensUsed = response.data.usage.completion_tokens;
       await validateAndUpdateTokensUsage(token, requestTokensUsed, responseTokensUsed);
 
       return {
