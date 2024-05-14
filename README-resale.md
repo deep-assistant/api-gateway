@@ -1,9 +1,5 @@
 ### Часть 1: Руководство для владельца ChatGPT на Azure (Обновлено для `docker-compose`)
 
-#### Введение
-
-Это обновленное руководство посвящено владельцам и администраторам серверов, которые хотят интегрировать ChatGPT, работающий на Microsoft Azure, со своими приложениями или сервисами, используя прокси-сервер. Теперь мы будем использовать `docker-compose` для более удобного запуска и управления контейнерами нашего приложения.
-
 #### Предварительные требования
 
 1. Учетная запись Microsoft Azure с доступом к API ChatGPT.
@@ -32,17 +28,39 @@ services:
     build: .
     container_name: chatgpt_proxy
     ports:
-      - "80:3000"
+      - <yourPort>
+    volumes:
+      - ./src/tokens:/usr/src/app/src/tokens
     environment:
-      - AZURE_OPENAI_ENDPOINT=https://deep-ai.openai.azure.com/openai/deployments/gpt-4-128k/chat/completions
-      - AZURE_OPENAI_KEY=ваш_api_key_здесь
-      - GPT_VERSION=2023-03-15-preview
-      - DEFAULT_USER_TOKEN_LIMIT=150
-      - DEFAULT_CHATGPT_TOKEN_LIMIT=1500
+      - AZURE_OPENAI_ENDPOINT=<endpoint>
+      - AZURE_OPENAI_KEY=<apiKey>
+      - GPT_VERSION=<versionGpt>
+      - GPT_MODEL_NAME=<modelName>
+      - PORT=<yourPort>
     restart: unless-stopped
 ```
 
 Замените плейсхолдеры своими фактическими значениями. 
+
+Пример:
+```yaml
+version: '3.8'
+services:
+  chatgpt_proxy:
+    build: .
+    container_name: chatgpt_proxy
+    ports:
+      - 8080:8080
+    volumes:
+      - ./src/tokens:/usr/src/app/src/tokens
+    environment:
+      - AZURE_OPENAI_ENDPOINT=https://ai.openai.azure.com/
+      - AZURE_OPENAI_KEY=ca481182363434e3e63a3c1b06181
+      - GPT_VERSION=2023-03-15-preview
+      - GPT_MODEL_NAME=gpt-4-128k
+      - PORT=8080
+    restart: unless-stopped
+```
 
 ##### 3. Сборка и запуск Docker-контейнера
 
@@ -55,9 +73,12 @@ docker-compose up -d
 Эта команда соберет образ Docker из вашего `Dockerfile` и запустит контейнер в фоновом режиме, используя настройки из `docker-compose.yml`.
 
 ##### 4. Генерация токенов
-Мы также адаптировали скрипт генерации токенов для использования с `docker-compose`:
+Скрипт генерации ограниченных токенов для использования с `docker-compose`:
 
 ```bash
-docker-compose exec chatgpt_proxy node scripts/token-gen.js --expires "2024-05-14" --userTokenLimit 100 --chatGptTokenLimit 1000
+docker-compose exec chatgpt_proxy node scripts/token-gen.js --expires "<dateRestriction>" --userTokenLimit <maxPromtToken> --chatGptTokenLimit <maxCompletionToken>
 ```
-
+Пример:
+```bash
+docker-compose exec chatgpt_proxy node scripts/token-gen.js --expires "2024-05-14" --userTokenLimit 150 --chatGptTokenLimit 150
+```
