@@ -77,4 +77,4 @@ async function validateAndUpdateTokensUsage(tokenString, usedUserTokens, usedCha
     await saveTokensData(tokensData);
   }
   
-  module.exports = { generateToken, validateAndUpdateTokensUsage };
+  module.exports = { generateToken, validateAndUpdateTokensUsage, loadTokensData};
