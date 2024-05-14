@@ -1,10 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { queryChatGPT } = require('./api/chatgpt');
-const { validateAndUpdateTokensUsage } = require('./utils/tokenManager');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 app.use(bodyParser.json());
 
@@ -13,7 +12,6 @@ app.post('/chatgpt', async (req, res) => {
   const { token, query } = req.body;
 
   try {
-    // Мы предполагаем, что токен уже подтвержден на данном этапе.
     // validateAndUpdateTokensUsage уже вызывается внутри queryChatGPT для обновления использования
     const chatGptResponse = await queryChatGPT(query, token);
 
