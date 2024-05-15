@@ -13,7 +13,7 @@
 На вашем сервере выполните:
 
 ```bash
-git clone [URL вашего репозитория с проектом] resale-chatgpt-azure
+git clone https://github.com/TimaxLacs/resale-chatgpt-azure/
 cd resale-chatgpt-azure
 ```
 
