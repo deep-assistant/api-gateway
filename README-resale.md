@@ -13,7 +13,7 @@
 На вашем сервере выполните:
 
 ```bash
-git clone [URL вашего репозитория с проектом] resale-chatgpt-azure
+git clone https://github.com/TimaxLacs/resale-chatgpt-azure
 cd resale-chatgpt-azure
 ```
 
@@ -52,7 +52,7 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - ./src/tokens:/usr/src/app/src/tokens
+      - ./src/db:/usr/src/app/src/db
     environment:
       - AZURE_OPENAI_ENDPOINT=https://ai.openai.azure.com/
       - AZURE_OPENAI_KEY=ca481182363434e3e63a3c1b06181
@@ -61,6 +61,7 @@ services:
       - PORT=8080
     restart: unless-stopped
 ```
+
 
 ##### 3. Сборка и запуск Docker-контейнера
 
@@ -80,5 +81,5 @@ docker-compose exec chatgpt_proxy node scripts/token-gen.js --expires "<dateRest
 ```
 Пример:
 ```bash
-docker-compose exec chatgpt_proxy node scripts/token-gen.js --expires "2024-05-14" --userTokenLimit 150 --chatGptTokenLimit 150
+docker-compose exec chatgpt_proxy node scripts/token-gen.js --expires "2024-06-14" --userTokenLimit 150 --chatGptTokenLimit 150
 ```

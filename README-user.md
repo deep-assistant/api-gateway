@@ -1,63 +1,45 @@
-### Руководство для пользователя — Интеграция с ChatGPT-resale на примере Python
+### Часть 2: Руководство для пользователя — Интеграция с ChatGPT-resale на примере Python
 
-#### Предварительные требования
+#### Использование Прокси для Общения с ChatGPT
 
-1. Действующий временный токен, полученный от владельца прокси-сервера
-2. Адрес прокси
-3. Python 3.x установлен на вашем компьютере или сервере.
-4. Установленный модуль `requests` для Python. Установите его, если необходимо, используя команду:
+Чтобы обратиться к ChatGPT через прокси:
 
-```bash
-pip install requests
-```
-
-#### Шаги по использованию ChatGPT через прокси
-
-##### 1. Импорт модуля `requests` и подготовка данных для запроса
-
-Откройте ваш редактор кода и создайте новый Python-скрипт. 
+1. **Отправьте HTTP POST запрос** на адрес прокси, указав название вашего диалога и ваше сообщение. Пример кода на Python:
 
 ```python
 import requests
 
-# Замените эти значения на актуальные данные
-PROXY_URL = "http://адрес_вашего_прокси/chatgpt"
-TOKEN = "ваш_временный_токен"
-USER_MESSAGE = "Привет, как тебя зовут?"
-```
+PROXY_URL = "http://173.212.230.201:8085/chatgpt"  # Обновите на актуальный адрес прокси
+TOKEN = "ваш_временный_токен_для_доступа"  # Временный токен, предоставленный администратором прокси
+DIALOG_NAME = "exampleDialog"  # Название вашего диалога
+USER_MESSAGE = "Привет, как тебя зовут?"  # Ваше сообщение к ChatGPT
 
-##### 2. Отправка запроса к ChatGPT через прокси
-
-В том же скрипте добавьте функцию для выполнения запроса:
-
-```python
-def query_chatgpt_via_proxy(message, token):
+def query_chatgpt_via_proxy(dialog_name, message, token):
     headers = {'Content-Type': 'application/json'}
     payload = {
         'token': token,
-        'query': message
+        'dialog_name': dialog_name,
+        'message': message
     }
 
     response = requests.post(PROXY_URL, json=payload, headers=headers)
 
     if response.status_code == 200:
         data = response.json()
-        return data.get('response')
+        print("Ответ ChatGPT:", data.get('response'))
     else:
-        return f"Ошибка: {response.text}"
+        print(f"Ошибка: {response.text}")
 
-# Делаем запрос и выводим ответ ChatGPT
-chatgpt_response = query_chatgpt_via_proxy(USER_MESSAGE, TOKEN)
-print("Ответ ChatGPT:", chatgpt_response)
+query_chatgpt_via_proxy(DIALOG_NAME, USER_MESSAGE, TOKEN)
 ```
 
-##### 3. Запуск скрипта
+### Параметры запроса:
 
-Сохраните файл и запустите его из командной строки или терминала:
+- `token`: Ваш временный доступный токен.
+- `dialog_name`: Название диалога, к которому вы хотите обращаться или который вы хотите создать.
+- `message`: Сообщение, которое вы хотите отправить.
 
-```bash
-python имя_вашего_файла.py
-```
+#### Обработка ответа:
 
 После выполнения скрипта вы должны увидеть ответ ChatGPT на ваш запрос, переданный через прокси-сервер.
 
@@ -66,4 +48,3 @@ python имя_вашего_файла.py
 timax@timax:~/Code/test$ python3 test.py 
 Ответ ChatGPT: Привет! Меня можно называть AI ассистентом. Как я могу помочь вам сегодня?
 ```
-
