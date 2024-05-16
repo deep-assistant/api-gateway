@@ -9,11 +9,11 @@ app.use(bodyParser.json());
 
 // Эндпоинт для отправки запросов пользователя к ChatGPT
 app.post('/chatgpt', async (req, res) => {
-  const { token, query } = req.body;
+  const { token, query, dialogName } = req.body;
 
   try {
     // validateAndUpdateTokensUsage уже вызывается внутри queryChatGPT для обновления использования
-    const chatGptResponse = await queryChatGPT(query, token);
+    const chatGptResponse = await queryChatGPT(query, token, dialogName);
 
     if (!chatGptResponse.success) {
       res.status(500).send({ success: false, message: chatGptResponse.error });
