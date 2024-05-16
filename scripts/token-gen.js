@@ -1,4 +1,4 @@
-const { generateToken } = require('../src/utils/tokenManager');
+const { generateToken } = require('../src/utils/dbManager');
 const yargs = require('yargs');
 
 const argv = yargs
