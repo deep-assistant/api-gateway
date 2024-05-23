@@ -9,11 +9,10 @@ app.use(bodyParser.json());
 
 // Эндпоинт для отправки запросов пользователя к ChatGPT
 app.post('/chatgpt', async (req, res) => {
-  const { token, query, dialogName } = req.body;
+  const { token, query, dialogName, tokenLimit, singleMessage } = req.body;
 
   try {
-    // validateAndUpdateTokensUsage уже вызывается внутри queryChatGPT для обновления использования
-    const chatGptResponse = await queryChatGPT(query, token, dialogName);
+    const chatGptResponse = await queryChatGPT(query, token, dialogName, tokenLimit, singleMessage);
 
     if (!chatGptResponse.success) {
       res.status(500).send({ success: false, message: chatGptResponse.error });
@@ -26,10 +25,13 @@ app.post('/chatgpt', async (req, res) => {
       tokensUsed: {
         requestTokensUsed: chatGptResponse.requestTokensUsed,
         responseTokensUsed: chatGptResponse.responseTokensUsed
+      },
+      remainingTokens: {
+        remainingUserTokens: chatGptResponse.remainingUserTokens,
+        remainingChatGptTokens: chatGptResponse.remainingChatGptTokens
       }
     });
   } catch (error) {
-    // Предполагается, что ошибка может произойти из-за исчерпания лимита токенов
     res.status(error.message.includes('Превышен лимит использования токенов.') ? 429 : 500).send({
       success: false,
       message: error.message
