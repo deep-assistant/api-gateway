@@ -35,7 +35,7 @@ async function syncContextData(dialogName, userMessage, senderRole) {
   // Контекстное сообщение, добавляемое для каждого диалога
   const systemMessage = {
     role: 'system',
-    content: 'You are chatting with an AI assistant.'
+    content: 'You are chatting with an AI assistant, which is a GPT-4o model version March 13, 2024'
   };
 
   if (dialog.messages.length === 0) {

@@ -1,13 +1,13 @@
 const axios = require('axios');
 const path = require('path');
-const fs = require('fs').promises;
 const { saveTokensData, syncContextData, loadData, dialogsFilePath } = require('../utils/dbManager');
 const tokensFilePath = path.join(__dirname, '..', 'db', 'tokens.json');
 let role = "";
+const fs = require('fs').promises;
 
 // Замените на свои данные
 const deploymentConfig = {
-  'gpt-4-128k': {
+  'gpt-4o': {  // Название модели должно точно соответствовать GPT_MODEL_NAME
       modelName: process.env.GPT_MODEL_NAME,
       endpoint: process.env.AZURE_OPENAI_ENDPOINT,
       apiKey: process.env.AZURE_OPENAI_KEY,
@@ -19,7 +19,7 @@ async function queryChatGPT(userQuery, token, dialogName, tokenLimit = Infinity,
   const model = process.env.GPT_MODEL_NAME;
   const config = deploymentConfig[model];
   if (!config) {
-    console.error(`Deployment config for ${config} not found`);
+    console.error(`Deployment config for ${model} not found`);
     return;
   }
 
@@ -39,13 +39,20 @@ async function queryChatGPT(userQuery, token, dialogName, tokenLimit = Infinity,
     singleMessage = true;
   }
 
+  const systemMessage = { role: 'system', content: 'You are chatting with an AI assistant, which is a GPT-4o model version March 13, 2024' };
   role = "user";
+  
+  const userMessage = { role: 'user', content: userQuery };
+
   const messageAllContextUser = singleMessage 
-    ? [{ role: 'user', content: userQuery }] 
+    ? [systemMessage, userMessage]
     : await syncContextData(dialogName, userQuery, role);
 
   try {
     const endpointAll = `${config.endpoint}/openai/deployments/${config.modelName}/chat/completions?api-version=${config.apiVersion}`;
+
+    console.log('Making request to endpoint:', endpointAll);  // Добавим вывод для проверки конечного URL
+    
     const response = await axios.post(endpointAll, {
       messages: messageAllContextUser,
     }, {
@@ -101,8 +108,9 @@ async function checkAndRemoveOldMessages(dialogName, totalTokensUsed, tokenLimit
     const removedMessage = dialog.messages.splice(1, 1)[0]; // Удаляем самое старое сообщение
     totalTokensUsed -= removedMessage.content.length; // Уменьшаем количество токенов на длину удаленного сообщения
   }
-    // Сохраняем обновленные диалоги
-    await fs.writeFile(dialogsFilePath, JSON.stringify({ dialogs }, null, 2));
-  }
-  
-  module.exports = { queryChatGPT };
+
+  // Сохраняем обновленные диалоги
+  await fs.writeFile(dialogsFilePath, JSON.stringify({ dialogs }, null, 2));
+}
+
+module.exports = { queryChatGPT };
