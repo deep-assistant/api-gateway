@@ -21,23 +21,18 @@ async function loadData(filePath) {
   }
 }
 
-async function syncContextData(dialogName, userMessage, senderRole) {
+async function syncContextData(dialogName, userMessage, senderRole, systemMessage) {
   let dialogs = await loadData(dialogsFilePath);
   dialogs = dialogs.dialogs || [];
   
   // Находим диалог или создаем новый
   let dialog = dialogs.find(d => d.name === dialogName);
   if (!dialog) {
-    dialog = { name: dialogName, messages: [] };
+    dialog = { name: dialogName, messages: [systemMessage] };
     dialogs.push(dialog);
   }
 
-  // Контекстное сообщение, добавляемое для каждого диалога
-  const systemMessage = {
-    role: 'system',
-    content: 'You are chatting with an AI assistant, which is a GPT-4o model version March 13, 2024'
-  };
-
+  // Если диалог пуст, добавляем системное сообщение
   if (dialog.messages.length === 0) {
     dialog.messages.push(systemMessage);
   }
@@ -88,4 +83,3 @@ async function generateToken(expires, userTokenLimit, chatGptTokenLimit) {
 }
 
 module.exports = { generateToken, saveTokensData, loadData, syncContextData, dialogsFilePath };
-

@@ -3,7 +3,6 @@ const path = require('path');
 const { saveTokensData, syncContextData, loadData, dialogsFilePath } = require('../utils/dbManager');
 const tokensFilePath = path.join(__dirname, '..', 'db', 'tokens.json');
 let role = "";
-const fs = require('fs').promises;
 
 // Замените на свои данные
 const deploymentConfig = {
@@ -15,7 +14,7 @@ const deploymentConfig = {
   }
 };
 
-async function queryChatGPT(userQuery, token, dialogName, tokenLimit = Infinity, singleMessage = false) {
+async function queryChatGPT(userQuery, token, dialogName, systemMessageContent = '', tokenLimit = Infinity, singleMessage = false) {
   const model = process.env.GPT_MODEL_NAME;
   const config = deploymentConfig[model];
   if (!config) {
@@ -39,71 +38,70 @@ async function queryChatGPT(userQuery, token, dialogName, tokenLimit = Infinity,
     singleMessage = true;
   }
 
-  const systemMessage = { role: 'system', content: 'You are chatting with an AI assistant, which is a GPT-4o model version March 13, 2024' };
+  const systemMessage = { role: 'system', content: systemMessageContent || 'You are chatting with an AI assistant.' };
   role = "user";
   
   const userMessage = { role: 'user', content: userQuery };
 
   const messageAllContextUser = singleMessage 
     ? [systemMessage, userMessage]
-    : await syncContextData(dialogName, userQuery, role);
+    : await syncContextData(dialogName, userQuery, role, systemMessage);
 
-  try {
-    const endpointAll = `${config.endpoint}/openai/deployments/${config.modelName}/chat/completions?api-version=${config.apiVersion}`;
-
-    console.log('Making request to endpoint:', endpointAll);  // Добавим вывод для проверки конечного URL
-    
-    const response = await axios.post(endpointAll, {
-      messages: messageAllContextUser,
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': config.apiKey
+    try {
+      const endpointAll = `${config.endpoint}/openai/deployments/${config.modelName}/chat/completions?api-version=${config.apiVersion}`;
+  
+      console.log('Making request to endpoint:', endpointAll);  // Добавим вывод для проверки конечного URL
+      
+      const response = await axios.post(endpointAll, {
+        messages: messageAllContextUser,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': config.apiKey
+        }
+      });
+  
+      const gptReply = response.data.choices[0].message.content.trim();
+      const requestTokensUsed = response.data.usage.prompt_tokens;
+      const responseTokensUsed = response.data.usage.completion_tokens;
+  
+      tokenBounded.used.user += requestTokensUsed;
+      tokenBounded.used.chatGpt += responseTokensUsed;
+      await saveTokensData(validLimitToken);
+  
+      if (!singleMessage) {
+        await checkAndRemoveOldMessages(dialogName, requestTokensUsed + responseTokensUsed, tokenLimit);
+        role = "assistant";
+        await syncContextData(dialogName, gptReply, role, systemMessage);
       }
-    });
-
-    const gptReply = response.data.choices[0].message.content.trim();
-    const requestTokensUsed = response.data.usage.prompt_tokens;
-    const responseTokensUsed = response.data.usage.completion_tokens;
-
-    tokenBounded.used.user += requestTokensUsed;
-    tokenBounded.used.chatGpt += responseTokensUsed;
-    await saveTokensData(validLimitToken);
-
-    if (!singleMessage) {
-      await checkAndRemoveOldMessages(dialogName, requestTokensUsed + responseTokensUsed, tokenLimit);
-      role = "assistant";
-      await syncContextData(dialogName, gptReply, role);
+  
+      const remainingUserTokens = tokenBounded.limits.user - tokenBounded.used.user;
+      const remainingChatGptTokens = tokenBounded.limits.chatGpt - tokenBounded.used.chatGpt;
+  
+      return {
+        success: true,
+        response: gptReply,
+        requestTokensUsed,
+        responseTokensUsed,
+        remainingUserTokens,
+        remainingChatGptTokens
+      };
+    } catch (error) {
+      console.error('Ошибка при запросе к ChatGPT:', error);
+      return {
+        success: false,
+        error: error.response ? error.response.data : error.message,
+      };
     }
-
-    const remainingUserTokens = tokenBounded.limits.user - tokenBounded.used.user;
-    const remainingChatGptTokens = tokenBounded.limits.chatGpt - tokenBounded.used.chatGpt;
-
-    return {
-      success: true,
-      response: gptReply,
-      requestTokensUsed,
-      responseTokensUsed,
-      remainingUserTokens,
-      remainingChatGptTokens
-    };
-  } catch (error) {
-    console.error('Ошибка при запросе к ChatGPT:', error);
-    return {
-      success: false,
-      error: error.response ? error.response.data : error.message,
-    };
   }
-}
-
-async function checkAndRemoveOldMessages(dialogName, totalTokensUsed, tokenLimit) {
-  let dialogs = await loadData(dialogsFilePath);  // dialogsFilePath теперь должен быть определен
-  dialogs = dialogs.dialogs || [];
-
-  let dialog = dialogs.find(d => d.name === dialogName);
-  if (!dialog) return;
-
-  // Удаляем старые сообщения, пока сумма токенов не будет меньше лимита
+  
+  async function checkAndRemoveOldMessages(dialogName, totalTokensUsed, tokenLimit) {
+    let dialogs = await loadData(dialogsFilePath);  // dialogsFilePath теперь должен быть определен
+    dialogs = dialogs.dialogs || [];
+  
+    let dialog = dialogs.find(d => d.name === dialogName);
+    if (!dialog) return;
+      // Удаляем старые сообщения, пока сумма токенов не будет меньше лимита
   while (totalTokensUsed > tokenLimit && dialog.messages.length > 1) {
     const removedMessage = dialog.messages.splice(1, 1)[0]; // Удаляем самое старое сообщение
     totalTokensUsed -= removedMessage.content.length; // Уменьшаем количество токенов на длину удаленного сообщения
