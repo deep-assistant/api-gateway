@@ -103,15 +103,17 @@ PROXY_URL = "http://173.212.230.201:8080/chatgpt"  # Обновите на ак�
 TOKEN = "ваш_временный_токен_для_доступа"  # Временный токен, предоставленный администратором прокси
 DIALOG_NAME = "exampleDialog"  # Название вашего диалога
 USER_MESSAGE = "Привет, как тебя зовут?"  # Ваше сообщение к ChatGPT
+SYSTEM_MESSAGE = "You are chatting with an AI assistant. Please respond accordingly."  # Пользовательское контекстное сообщение
 TOKEN_LIMIT = 1000  # Лимит токенов для диалога, необязательный параметр
-SINGLE_MESSAGE = True  # Режим вопрос-ответ: False - ведет диалог, True - только один запрос и ответ
+SINGLE_MESSAGE = False  # Режим вопрос-ответ: False - ведет диалог, True - только один запрос и ответ
 
-def query_chatgpt_via_proxy(dialog_name, message, token, token_limit=None, single_message=None):
+def query_chatgpt_via_proxy(dialog_name, message, token, system_message_content='', token_limit=None, single_message=None):
     headers = {'Content-Type': 'application/json'}
     payload = {
         'token': token,
         'dialogName': dialog_name,
         'query': message,
+        'systemMessageContent': system_message_content,
     }
 
     if token_limit is not None:
@@ -131,7 +133,7 @@ def query_chatgpt_via_proxy(dialog_name, message, token, token_limit=None, singl
         print(f"Ошибка: {response.text}")
 
 # Пример вызова функции
-query_chatgpt_via_proxy(DIALOG_NAME, USER_MESSAGE, TOKEN, TOKEN_LIMIT, SINGLE_MESSAGE)
+query_chatgpt_via_proxy(DIALOG_NAME, USER_MESSAGE, TOKEN, SYSTEM_MESSAGE, TOKEN_LIMIT, SINGLE_MESSAGE)
 ```
 
 ### Параметры запроса:
