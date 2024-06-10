@@ -1,22 +1,28 @@
-const { generateToken } = require('../src/utils/dbManager');
-const yargs = require('yargs');
+import { saveTokensData, loadData } from '../src/utils/dbManager.js';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
+import crypto from 'crypto';
+import path from 'path';
 
-const argv = yargs
+const tokensFilePath = path.join(path.dirname(''), 'src', 'db', 'tokens.json');
+
+// Получаем параметры из командной строки
+const argv = yargs(hideBin(process.argv))
   .option('expires', {
     alias: 'e',
-    description: 'Дата истечения токена в формате ISO (например, 2023-12-31)',
+    description: 'Дата истечения токена в формате ISO',
     type: 'string',
     demandOption: true,
   })
   .option('userTokenLimit', {
-    alias: 'u',
-    description: 'Лимит токенов, который пользователь может потратить на запросы',
+    alias: 'ut',
+    description: 'Лимит токенов для пользователя',
     type: 'number',
     demandOption: true,
   })
   .option('chatGptTokenLimit', {
-    alias: 'c',
-    description: 'Лимит токенов, который ChatGPT может потратить на ответы',
+    alias: 'ct',
+    description: 'Лимит токенов для ChatGPT',
     type: 'number',
     demandOption: true,
   })
@@ -26,16 +32,22 @@ const argv = yargs
 
 const run = async () => {
   try {
-    const newToken = await generateToken(
-      argv.expires,
-      argv.userTokenLimit,
-      argv.chatGptTokenLimit
-    );
-
+    const tokensData = await loadData(tokensFilePath);
+    const newToken = {
+      token: crypto.randomBytes(16).toString('hex'),
+      expires: argv.expires,
+      limits: {
+        user: argv.userTokenLimit,
+        chatGpt: argv.chatGptTokenLimit,
+      },
+      used: {
+        user: 0,
+        chatGpt: 0,
+      },
+    };
+    tokensData.tokens.push(newToken);
+    await saveTokensData(tokensData);
     console.log(`Новый токен сгенерирован успешно: ${newToken.token}`);
-    console.log(`Дата истечения: ${newToken.expires}`);
-    console.log(`Лимит токенов пользователя: ${newToken.limits.user}`);
-    console.log(`Лимит токенов ChatGPT: ${newToken.limits.chatGpt}`);
   } catch (error) {
     console.error('Ошибка при генерации токена:', error);
   }
