@@ -39,7 +39,6 @@ async function saveTokensData(tokensData) {
 
 // Загрузка данных из хранилища
 async function loadData(filePath) {
-  console.log('filePath', filePath);
   try {
     const data = await fs.readFile(filePath, { encoding: 'utf8' });
     return JSON.parse(data);
@@ -72,26 +71,37 @@ async function addedMessageLinks(deep, messageValue, author) {
   const syncTextFileLink = (await deep.insert({ type_id: syncTextFileTypeId }, { name: 'INSERT_HANDLER_SYNC_TEXT_FILE' })).data[0];
   await deep.insert({ link_id: syncTextFileLink.id, value: author }, { table: 'strings' });
   await deep.insert({ from_id: syncTextFileLink.id, type_id: authorTypeLinkId, to_id: messagesLink.id });
+  //console.log(messagesLink)
   return messagesLink;
 }
 
-async function addedReplyLinks(deep, replyMessageLink, messageLink) {
+async function addedReplyLinks(deep,  replyMessageLink, messageLink){
   const replyTypeLinkId = await deep.id('@deep-foundation/messaging', 'Reply');
-  return (await deep.insert({ from_id: replyMessageLink, type_id: replyTypeLinkId, to_id: messageLink }, { name: 'INSERT_HANDLER_SYNC_replys_FILE' })).data[0];
+  const reply = (await deep.insert({
+    from_id: replyMessageLink,
+    type_id: replyTypeLinkId,
+    to_id: messageLink
+  }, { name: 'INSERT_HANDLER_SYNC_replys_FILE' })).data[0];
+  return reply;
 }
 
-async function addedContainLinks(deep, spaceIdArgument, conversation) {
+async function addedContainLinks(deep, spaceIdArgument, conversation){
   const spaceId = spaceIdArgument || (await deep.id('deep', 'admin'));
   const containTypeId = await deep.id('@deep-foundation/core', 'Contain');
-  return (await deep.insert({ from_id: spaceId, type_id: containTypeId, to_id: conversation.id }, { name: 'INSERT_SYNC_TEXT_FILE_CONTAIN' })).data[0];
+  const containSyncTextFile = (await deep.insert({
+  from_id: spaceId,
+  type_id: containTypeId,
+  to_id: conversation.id,
+  }, { name: 'INSERT_SYNC_TEXT_FILE_CONTAIN' })).data[0];
+  return containSyncTextFile;
 }
 
-async function allDialog(deep, conversation) {
+async function allDialog(deep, conversation){
   const messageTypeLinkId = await deep.id('@deep-foundation/messaging', 'Message');
   const authorTypeLinkId = await deep.id('@deep-foundation/messaging', 'Author');
-  const tokensTypeLinkId = await deep.id('@deep-foundation/tokens', 'Tokens')
+  const tokensTypeLinkId = await deep.id("@deep-foundation/tokens", "Tokens")
   const messagingTreeId = await deep.id('@deep-foundation/messaging', 'messagingTree');
-  return await deep.select({
+  const  historyMessage = await deep.select({
     tree_id: { _eq: messagingTreeId },
     parent: { id: { _eq: conversation } },
     link: { type_id: { _in: messageTypeLinkId } },
@@ -99,40 +109,40 @@ async function allDialog(deep, conversation) {
     table: 'tree',
     variables: { order_by: { depth: "asc" } },
     returning: `
+    id
+    depth
+    root_id
+    parent_id
+    link_id
+    parent {
       id
-      depth
-      root_id
-      parent_id
-      link_id
-      parent {
+      from_id
+      type_id
+      to_id
+      value
+      author: out (where: { type_id: { _eq: ${authorTypeLinkId}} }) { 
         id
         from_id
         type_id
         to_id
-        value
-        author: out (where: { type_id: { _eq: ${authorTypeLinkId}} }) { 
-          id
-          from_id
-          type_id
-          to_id
-        }
-        tokens: out (where: { type_id: { _eq: ${tokensTypeLinkId}} }) { 
-          id
-          from_id
-          type_id
-          to_id
-          value
-        }
       }
-    `
-  });
+      tokens: out (where: { type_id: { _eq: ${tokensTypeLinkId}} }) { 
+      id
+      from_id
+      type_id
+      to_id
+      value
+      }
+    }`
+  })
+  //console.log(historyMessage)
+  return historyMessage;
 }
 
 async function requestBody(deep, conversation) {
   const authorTypeLinkId = await deep.id('@deep-foundation/messaging', 'Author');
   
   let historyMessageLinks = await allDialog(deep, conversation);
-
   if (!Array.isArray(historyMessageLinks.data)) {
     console.error("historyMessageLinks received:", historyMessageLinks);
     throw new Error("historyMessageLinks is not an array");
@@ -145,10 +155,9 @@ async function requestBody(deep, conversation) {
     if (!messageLink.data || messageLink.data.length === 0) {
       console.error("No message data found for link_id:", link.link_id);
       return null;
-    }
+    }historyMessageLinks
 
     const messageLinkValue = messageLink.data[0].value;
-
     const authorLink = await deep.select({ type_id: authorTypeLinkId, to_id: messageLink.data[0].id });
     if (!authorLink.data || authorLink.data.length === 0) {
       console.error("No author data found for link_id:", link.link_id);
@@ -162,18 +171,19 @@ async function requestBody(deep, conversation) {
     }
 
     authorLinkValue = authorLinkValue.data[0].value;
-
     return {
-      role: authorLinkValue,
-      content: messageLinkValue
+      role: authorLinkValue.value,
+      content: messageLinkValue.value
     };
   }));
-
-  return { messages: messages.filter(msg => msg !== null) };
+  console.log('booooodyyyy', { messages: messages.filter(msg => msg !== null) })
+  let tokenValueString = { messages: messages.filter(msg => msg !== null) }
+  tokenValueString = tokenValueString
+  console.log('striiiiiiing', messages)
+  return messages;
 }
 
 async function deleteFirstMessage(deep, dialogName, spaceId, messageNum) {
-  const containTypeId = await deep.id('@deep-foundation/core', 'Contain');
   const conversationTypeLink = await deep.id('@deep-foundation/chatgpt-azure', 'Conversation')
   const messageTypeLinkId = await deep.id('@deep-foundation/messaging', 'Message');
   const authorTypeLinkId = await deep.id('@deep-foundation/messaging', 'Author');
@@ -186,7 +196,6 @@ async function deleteFirstMessage(deep, dialogName, spaceId, messageNum) {
   });
   const allHistory = await allDialog(deep, conversationLink.data[0].id);
   const updateReplyLink = await addedReplyLinks(deep, allHistory.data[2].link_id, allHistory.data[0].link_id);
-  await addedContainLinks(deep, spaceIdArgument, updateReplyLink);
   let authorLink = await deep.select({
     type_id: authorTypeLinkId,
     to_id: allHistory.data[messageNum].link_id
@@ -211,11 +220,6 @@ async function deleteFirstMessage(deep, dialogName, spaceId, messageNum) {
         id: allHistory.data[messageNum].link_id,   
       },
       {
-        from_id: spaceId,
-        type_id: containTypeId,
-        to_id: allHistory.data[messageNum].link_id
-      },
-      {
         id: authorLink
       },
       {
@@ -225,24 +229,13 @@ async function deleteFirstMessage(deep, dialogName, spaceId, messageNum) {
         id: replyLink1
       },
       {
-        from_id: spaceId,
-        type_id: containTypeId,
-        to_id: replyLink1
-      },
-      {
         id: replyLink2
       },
-      {
-        from_id: spaceId,
-        type_id: containTypeId,
-        to_id: replyLink2
-      }
     ]
   });
 }
 
 async function syncContextData(dialogName, userMessage, senderRole, systemMessage, spaceIdArgument, deep) {
-  console.log('11111');
   const conversationTypeLink = await deep.id('@deep-foundation/chatgpt-azure', 'Conversation');
   
   let conversationLink = await deep.select({
@@ -251,39 +244,34 @@ async function syncContextData(dialogName, userMessage, senderRole, systemMessag
   });
 
   if (conversationLink.data[0] == undefined) {
-    const contextMessageAuthor = 'context';
+    const contextMessageAuthor = 'system';
     conversationLink = await addedConversationLinks(deep, dialogName);
     await addedContainLinks(deep, spaceIdArgument, conversationLink);
 
     const contextMessageLink = await addedMessageLinks(deep, systemMessage, contextMessageAuthor);
-    await addedContainLinks(deep,spaceIdArgument, contextMessageLink);
-
-    const replyConversationLink = await addedReplyLinks(deep, contextMessageLink.id, conversationLink.id);
-    await addedContainLinks(deep, spaceIdArgument, replyConversationLink);
-
-    const userMessageLink = await addedMessageLinks(deep, userMessage, senderRole);
-    await addedContainLinks(deep,spaceIdArgument, userMessageLink);
+    await addedReplyLinks(deep, contextMessageLink.id, conversationLink.id);
     
-    const replyFirstMessageLink = await addedReplyLinks(deep, userMessageLink.id, contextMessageLink.id);
-    await addedContainLinks(deep, spaceIdArgument, replyFirstMessageLink);
+    const userMessageLink = await addedMessageLinks(deep, userMessage, senderRole);
+    await addedReplyLinks(deep, userMessageLink.id, contextMessageLink.id);
+    
   } else {
     const allHistory = await allDialog(deep, conversationLink.data[0].id);
     const lastMessageID = allHistory.data.at(-1).link_id;
-    
+
     const userMessageLink = await addedMessageLinks(deep, userMessage, senderRole);
-    await addedContainLinks(deep,spaceIdArgument, userMessageLink);
-    
-    const replyLink = await addedReplyLinks(deep, userMessageLink.id, lastMessageID);
-    await addedContainLinks(deep, spaceIdArgument, replyLink);
+    await addedReplyLinks(deep, userMessageLink.id, lastMessageID);
   }
+  conversationLink = await deep.select({
+    type_id: conversationTypeLink, 
+    value: dialogName
+  });
+  return await requestBody(deep, conversationLink.data[0].id)
 }
 
 async function generateToken(deep, userName, spaceIdArgument, userTokenLimit, chatGptTokenLimit) {
-  console.log(deep)
   const tokensTypeLinkId = await deep.id("@deep-foundation/tokens", "Tokens");
-  console.log(tokensTypeLinkId)
   const containTypeId = await deep.id('@deep-foundation/core', 'Contain');
-  const tokenValue = `{"currentUserToken": 0, "currentChatToken": 0, "limitUserToken": ${userTokenLimit}, "limitcurrentChatToken": ${chatGptTokenLimit}}`;
+  const tokenValue = `{"currentUserToken": ${userTokenLimit}, "currentChatToken": ${chatGptTokenLimit}}`;
   const tokenLink = (await deep.insert({ type_id: tokensTypeLinkId }, { name: 'INSERT_HANDLER_SYNC_TEXT_FILE' })).data[0];
   await deep.insert({ link_id: tokenLink.id, value: tokenValue }, { table: 'strings' });
 
@@ -341,6 +329,10 @@ async function selectTokensData(deep, userName) {
       type_id: tokensTypeLinkId,
     });
     const tokenValue = JSON.parse(tokenLink.data[0].value.value);
+    
+    if(userNameLink == undefined){
+      return undefined
+    }
     return [tokenValue.currentUserToken, tokenValue.currentChatToken];
   } catch (error) {
     console.error('Ошибка при чтении данных о токенах:', error);
