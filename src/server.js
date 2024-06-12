@@ -1,34 +1,36 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { queryChatGPT } from './api/chatgpt.js';
-import { makeDeepClient, generateToken, syncContextData, updateTokensData, selectTokensData, requestBody, isValidAdminToken } from './utils/dbManager.js';
-import path from 'path';
+import { makeDeepClient, generateToken, updateTokensData, selectTokensData, requestBody, isValidAdminToken } from './utils/dbManager.js';
 
 const app = express();
 const PORT = process.env.PORT;
+const token_GQL = process.env.GQL_TOKEN;
 
-//const tokensFilePath = path.join(path.dirname(''), 'src', 'db', 'tokens.json');
-
-// Создаем клиента Deep в начале кода
-const deep = makeDeepClient(process.env.GQL_TOKEN);
+const deep = makeDeepClient(token_GQL);
 
 app.use(bodyParser.json());
 
 app.post('/chatgpt', async (req, res) => {
   const { token, query, dialogName, model, systemMessageContent, tokenLimit, singleMessage, userNameToken } = req.body;
-
+  console.log('***************************');
+  console.log(req.body);
+  console.log('***************************');
   if (!await isValidAdminToken(token)) {
     res.status(401).send({ success: false, message: 'Неверный токен администратора' });
     return;
   }
-
+  const userTokens = await selectTokensData(deep, userNameToken);
+  if(userTokens[0] <= 0 | userTokens[1] <= 0){
+    res.status(403).send({ success: false, message: 'Недостаточно токенов', userTokens });
+    return
+  }
   try {
     const spaceIdArgument = process.env.SPACE_ID_ARGUMENT;
 
-    await syncContextData(dialogName, query, 'user', systemMessageContent, spaceIdArgument, deep, userNameToken, token);
+    //await syncContextData(dialogName, query, 'user', systemMessageContent, spaceIdArgument, deep, userNameToken, token);
     
-    const chatGptResponse = await queryChatGPT(query, token, dialogName, model, systemMessageContent, tokenLimit, singleMessage);
-
+    const chatGptResponse = await queryChatGPT(query, token, dialogName, model, systemMessageContent, tokenLimit, singleMessage, userNameToken, token_GQL);
     if (!chatGptResponse.success) {
       res.status(500).send({ success: false, message: chatGptResponse.error });
       return;
@@ -37,18 +39,12 @@ app.post('/chatgpt', async (req, res) => {
     res.send({
       success: true,
       response: chatGptResponse.response,
-      tokensUsed: {
-        requestTokensUsed: chatGptResponse.requestTokensUsed,
-        responseTokensUsed: chatGptResponse.responseTokensUsed
-      },
-      remainingTokens: {
-        remainingUserTokens: chatGptResponse.remainingUserTokens,
-        remainingChatGptTokens: chatGptResponse.remainingChatGptTokens
-      }
+      tokensUsed: chatGptResponse.token_user,
+      remainingTokens: chatGptResponse.token_gpt
     });
   } catch (error) {
     console.error('Ошибка:', error.message, error.stack);
-    res.status(error.message.includes('Превышен лимит использования токенов.') ? 429 : 500).send({
+    res.status(error.message.includes('Превышен лимит использования админских токенов.') ? 429 : 500).send({
       success: false,
       message: error.message
     });
