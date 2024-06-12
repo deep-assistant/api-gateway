@@ -7,71 +7,97 @@
 1. **Отправьте HTTP POST запрос** на адрес прокси, указав название вашего диалога и ваше сообщение. Пример кода на Python:
 
 ```python
+import os
 import requests
 
-PROXY_URL = "https://8080-timaxhack-resalechatgpt-3ubkc4bx5ro.ws-eu114.gitpod.io/chatgpt"  # Обновите на актуальный адрес прокси
+# Настройки прокси-сервера и токенов
+PROXY_URL_CHECK = "https://8080-timaxhack-resalechatgpt-3ubkc4bx5ro.ws-eu114.gitpod.io/tokens"
+PROXY_URL_CHAT = "https://8080-timaxhack-resalechatgpt-3ubkc4bx5ro.ws-eu114.gitpod.io/chatgpt"
+PROXY_URL_GENERATE = "https://8080-timaxhack-resalechatgpt-3ubkc4bx5ro.ws-eu114.gitpod.io/generate-token"
 ADMIN_TOKEN = "246a07ec9c01e848b193aa3bc1f8c916"  # Токен администратора из JSON файла
-USER_NAME = "exampleUser"  # Имя пользователя, для которого создается токен
-USER_MESSAGE = "Привет, как тебя зовут?"  # Ваше сообщение к ChatGPT
-DIALOG_NAME = "exampleDialog"  # Название вашего диалога
-SYSTEM_MESSAGE = "You are chatting with an AI assistant. Please respond accordingly."  # Пользовательское контекстное сообщение
-USER_TOKEN_LIMIT = 1500  # Лимит токенов для пользователя
-CHATGPT_TOKEN_LIMIT = 1500  # Лимит токенов для ChatGPT
-TOKEN_LIMIT = 1000  # Лимит токенов для диалога
-SINGLE_MESSAGE = True  # Режим вопрос-ответ: True - только один запрос и ответ
 
-def create_deep_token():
-    URL = "https://8080-timaxhack-resalechatgpt-3ubkc4bx5ro.ws-eu114.gitpod.io/generate-token"
-    PAYLOAD = {
+USER_NAME = "exampleUser3"  # Имя пользователя, для которого создается токен
+USER_MESSAGE = "перескажи всю историю нашего с тобой диалога "  # Ваше сообщение к ChatGPT
+DIALOG_NAME = "44444"  # Название вашего диалога
+SYSTEM_MESSAGE = "You are chatting with an AI assistant. Please respond accordingly. ты можешь помнить всю историю диалога"  # Пользовательское контекстное сообщение
+
+USER_TOKEN_LIMIT = 11500  # Лимит токенов для пользователя
+CHATGPT_TOKEN_LIMIT = 11500  # Лимит токенов для ChatGPT
+TOKEN_LIMIT = 10000  # Лимит токенов для диалога
+SINGLE_MESSAGE = False  # Режим вопрос-ответ: True - только один запрос и ответ
+
+def check_token_and_create_if_needed():
+    headers = {'Content-Type': 'application/json'}
+    payload = {
+        "token": ADMIN_TOKEN,
+        "userName": USER_NAME
+    }
+
+    # Проверка наличия токена
+    response = requests.get(PROXY_URL_CHECK, json=payload, headers=headers)
+    print(response)
+    if response.status_code == 200:
+        data = response.json()
+        if "tokens" in data:
+            print("Токен пользователя найден:", data["tokens"])
+            return True
+        else:
+            print("Токен не найден, создаем новый...")
+            return create_new_token()
+    else:
+        print(f"Ошибка при проверке токена: {response.text}")
+        return False
+
+def create_new_token():
+    headers = {'Content-Type': 'application/json'}
+    payload = {
         "token": ADMIN_TOKEN,
         "userName": USER_NAME,
         "userTokenLimit": USER_TOKEN_LIMIT,
         "chatGptTokenLimit": CHATGPT_TOKEN_LIMIT
     }
 
-    response = requests.post(URL, json=PAYLOAD)
+    response = requests.post(PROXY_URL_GENERATE, json=payload, headers=headers)
     if response.status_code == 200:
         data = response.json()
-        print("Token ID создан успешно:", data["tokenId"])
-        return data["tokenId"]
+        print("Новый токен создан:", data["tokenId"])
+        return True
     else:
-        print("Ошибка создания токена:", response.text)
-        return None
+        print(f"Ошибка при создании токена: {response.text}")
+        return False
 
-def query_chatgpt_via_proxy(dialog_name, message, token, system_message_content='', token_limit=None, single_message=None):
+def query_chatgpt_via_proxy(user_name ,dialog_name, message, token, system_message_content='', token_limit=None, single_message=True):
+    print(single_message)
     headers = {'Content-Type': 'application/json'}
     payload = {
         "token": token,
-        "dialogName": dialog_name,
         "query": message,
+        "dialogName": dialog_name,
+        "model": "gpt-4o",
         "systemMessageContent": system_message_content,
+        "tokenLimit": token_limit,
+        "singleMessage": single_message,
+        "userNameToken": user_name
     }
 
-    if token_limit is not None:
-        payload["tokenLimit"] = token_limit
-
-    if single_message is not None:
-        payload["singleMessage"] = single_message
-
-    response = requests.post(PROXY_URL, json=payload, headers=headers)
+    response = requests.post(PROXY_URL_CHAT, json=payload, headers=headers)
 
     if response.status_code == 200:
         data = response.json()
         print("Ответ ChatGPT:", data.get("response"))
-        print("Остаток токенов пользователя:", data.get("remainingTokens", {}).get("remainingUserTokens"))
-        print("Остаток токенов ChatGPT:", data.get("remainingTokens", {}).get("remainingChatGptTokens"))
+        print("Остаток токенов пользователя:", data.get("tokensUsed"))
+        print("Остаток токенов ChatGPT:", data.get("remainingTokens"))
     else:
         print(f"Ошибка: {response.text}")
 
-# Создаем токен в Deep и используем его для отправки сообщения
+# Основная логика
 def main():
-    new_token = create_deep_token()
-    if new_token:
-        query_chatgpt_via_proxy(DIALOG_NAME, USER_MESSAGE, new_token, SYSTEM_MESSAGE, TOKEN_LIMIT, SINGLE_MESSAGE)
+    if check_token_and_create_if_needed():
+        query_chatgpt_via_proxy(USER_NAME, DIALOG_NAME, USER_MESSAGE, ADMIN_TOKEN, SYSTEM_MESSAGE, TOKEN_LIMIT, SINGLE_MESSAGE)
+
 
 if __name__ == "__main__":
     main()
-
 ```
 
 ### Параметры запроса:
