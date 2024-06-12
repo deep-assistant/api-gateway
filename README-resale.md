@@ -81,5 +81,5 @@ docker-compose exec chatgpt_proxy node scripts/token-gen.js --expires "<dateRest
 ```
 Пример:
 ```bash
-docker-compose exec chatgpt_proxy node scripts/token-gen.js --expires "2024-06-14" --userTokenLimit 150 --chatGptTokenLimit 150
+docker-compose exec chatgpt_proxy node scripts/token-gen.js --expires "2024-06-14" --userTokenLimit 1500 --chatGptTokenLimit 1500
 ```
