@@ -1,109 +1,69 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { queryChatGPT } from './api/chatgpt.js';
-import { makeDeepClient, generateToken, updateTokensData, selectTokensData, requestBody, isValidAdminToken } from './utils/dbManager.js';
+import { initializeFiles, generateUserToken, syncContextData, requestBody, deleteFirstMessage, clearDialog, isValidAdminToken, isValidUserToken, loadData } from './utils/dbManager.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const tokensFilePath = path.join(__dirname, 'db', 'tokens.json');
+const dialogsFilePath = path.join(__dirname, 'db', 'dialogs.json');
+const userTokensFilePath = path.join(__dirname, 'db', 'user_tokens.json');
 
 const app = express();
 const PORT = process.env.PORT;
-const token_GQL = process.env.GQL_TOKEN;
-
-const deep = makeDeepClient(token_GQL);
 
 app.use(bodyParser.json());
 
+// Исправленный путь к файлу токенов пользователей
+
+initializeFiles();
+
+async function checkAndGenerateUserToken(userName) {
+  let tokensData = await loadData(userTokensFilePath);
+  if (!tokensData || !tokensData.tokens) {
+    tokensData = { tokens: [] };
+  }
+  let userToken = tokensData.tokens.find(token => token.id === userName);
+  if (!userToken) {
+    userToken = await generateUserToken(userName); // Лимиты по умолчанию
+  }
+  return userToken;
+}
+
 app.post('/chatgpt', async (req, res) => {
   const { token, query, dialogName, model, systemMessageContent, tokenLimit, singleMessage, userNameToken } = req.body;
-  console.log('***************************');
-  console.log(req.body);
-  console.log('***************************');
-  if (!await isValidAdminToken(token)) {
-    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+
+  const userToken = await checkAndGenerateUserToken(userNameToken);
+  if (!await isValidUserToken(userNameToken)) {
+    res.status(401).send({ success: false, message: 'Неверный пользовательский токен' });
     return;
   }
-  const userTokens = await selectTokensData(deep, userNameToken);
-  if(userTokens[0] <= 0 | userTokens[1] <= 0){
-    res.status(403).send({ success: false, message: 'Недостаточно токенов', userTokens });
-    return
-  }
-  try {
-    const spaceIdArgument = process.env.SPACE_ID_ARGUMENT;
 
-    //await syncContextData(dialogName, query, 'user', systemMessageContent, spaceIdArgument, deep, userNameToken, token);
-    
-    const chatGptResponse = await queryChatGPT(query, token, dialogName, model, systemMessageContent, tokenLimit, singleMessage, userNameToken, token_GQL);
+  try {
+    const chatGptResponse = await queryChatGPT(query, userToken.id, dialogName, model, systemMessageContent, tokenLimit, singleMessage, token);
     if (!chatGptResponse.success) {
+      console.log('chatGptResponse.success-----------')
       res.status(500).send({ success: false, message: chatGptResponse.error });
       return;
     }
-
     res.send({
       success: true,
-      response: chatGptResponse.response,
-      tokensUsed: chatGptResponse.token_user,
-      remainingTokens: chatGptResponse.token_gpt
+      response: chatGptResponse.response
     });
   } catch (error) {
-    console.error('Ошибка:', error.message, error.stack);
-    res.status(error.message.includes('Превышен лимит использования админских токенов.') ? 429 : 500).send({
+    res.status(error.message.includes('Превышен лимит использования токенов.') ? 429 : 500).send({
       success: false,
       message: error.message
     });
   }
 });
 
-// Эндпоинт для создания ограниченного токена в Deep
-app.post('/generate-token', async (req, res) => {
-  const { token, userName, userTokenLimit, chatGptTokenLimit } = req.body;
 
-  if (!await isValidAdminToken(token)) {
-    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
-    return;
-  }
-
-  try {
-    console.log('Запрос на создание токена:', { userName, userTokenLimit, chatGptTokenLimit });
-    const newTokenId = await generateToken(deep, userName, process.env.SPACE_ID_ARGUMENT, userTokenLimit, chatGptTokenLimit);
-    
-    res.send({
-      success: true,
-      tokenId: newTokenId
-    });
-  } catch (error) {
-    console.error('Ошибка при создании токена:', error.message, error.stack);
-    res.status(500).send({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// Эндпоинт для обновления токенов
-app.post('/update-token', async (req, res) => {
-  const { token, userName, newUserTokenLimit, newChatGptTokenLimit } = req.body;
-
-  if (!await isValidAdminToken(token)) {
-    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
-    return;
-  }
-
-  try {
-    await updateTokensData(deep, userName, newUserTokenLimit, newChatGptTokenLimit);
-    
-    res.send({
-      success: true,
-      message: 'Token limits updated successfully'
-    });
-  } catch (error) {
-    console.error('Ошибка при обновлении токена:', error.message, error.stack);
-    res.status(500).send({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// Эндпоинт для получения токенов пользователя
-app.get('/tokens', async (req, res) => {
+// Эндпоинт для создания ограниченного пользовательского токена
+app.post('/generate-user-token', async (req, res) => {
   const { token, userName } = req.body;
 
   if (!await isValidAdminToken(token)) {
@@ -112,12 +72,44 @@ app.get('/tokens', async (req, res) => {
   }
 
   try {
-    const tokens = await selectTokensData(deep, userName);
-    
+    console.log('Запрос на создание токена для пользователя:', { userName });
+    const newUserToken = await generateUserToken(userName);
+
     res.send({
       success: true,
-      tokens
+      id: newUserToken.id, // возвращаем ID пользователя
+      tokens: newUserToken['tokens-gpt'] // возвращаем токены
     });
+  } catch (error) {
+    console.error('Ошибка при создании токена для пользователя:', error.message, error.stack);
+    res.status(500).send({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+app.get('/user-tokens', async (req, res) => {
+  if (!await isValidAdminToken(token)) {
+    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    return;
+  }
+
+  try {
+    const tokensData = await loadData(userTokensFilePath);
+    const tokenEntry = tokensData.tokens.find(t => t.id === userName);
+    if (tokenEntry) {
+      res.send({
+        success: true,
+        id: tokenEntry.id, // возвращаем ID пользователя
+        tokens: tokenEntry.tokens_gpt // возвращаем токены
+      });
+    } else {
+      res.status(404).send({
+        success: false,
+        message: 'Токен пользователя не найден'
+      });
+    }
   } catch (error) {
     console.error('Ошибка при получении токенов:', error.message, error.stack);
     res.status(500).send({
@@ -127,8 +119,34 @@ app.get('/tokens', async (req, res) => {
   }
 });
 
+
 // Эндпоинт для получения тела запроса истории диалога
 app.get('/dialog-history', async (req, res) => {
+  const { token, dialogName } = req.query;
+
+  if (!await isValidAdminToken(token)) {
+    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    return;
+  }
+
+  try {
+    const history = await requestBody(dialogName);
+    
+    res.send({
+      success: true,
+      history
+    });
+  } catch (error) {
+    console.error('Ошибка при получении истории диалога:', error.message, error.stack);
+    res.status(500).send({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Эндпоинт для очистки диалога
+app.post('/clear-dialog', async (req, res) => {
   const { token, dialogName } = req.body;
 
   if (!await isValidAdminToken(token)) {
@@ -137,14 +155,14 @@ app.get('/dialog-history', async (req, res) => {
   }
 
   try {
-    const history = await requestBody(deep, dialogName);
-    
-    res.send({
-      success: true,
-      history
-    });
+    const success = await clearDialog(dialogName);
+    if (success) {
+      res.send({ success: true, message: `Диалог "${dialogName}" успешно очищен.` });
+    } else {
+      res.status(404).send({ success: false, message: `Диалог "${dialogName}" не найден.` });
+    }
   } catch (error) {
-    console.error('Ошибка при получении истории диалога:', error.message, error.stack);
+    console.error('Ошибка при очистке диалога:', error.message, error.stack);
     res.status(500).send({
       success: false,
       message: error.message
