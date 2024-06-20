@@ -52,7 +52,20 @@ async function generateUserToken(userName) {
     console.error('Ошибка при загрузке токенов пользователей.');
     return null;
   }
+  const userToken = tokensData.tokens.find(token => token.id === userName);
+  if (!userToken) {
+    const newToken = {
+      id: userName,
+      'tokens_gpt': 1500
+    };
+    tokensData.tokens.push(newToken);
+    await saveData(userTokensFilePath, tokensData);
+    return newToken;
+  }
+
+  return userToken;
 }
+
 
 async function generateAdminToken(expires, userTokenLimit, chatGptTokenLimit) {
   const tokensData = await loadData(tokensFilePath);
@@ -151,6 +164,8 @@ async function isValidAdminToken(providedToken) {
   const tokensData = await loadData(tokensFilePath);
   return tokensData?.tokens.some(tokenEntry => tokenEntry.token === providedToken);
 }
+
+
 
 export {
   initializeFiles,
