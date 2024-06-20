@@ -38,14 +38,14 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o', 
   }
 
   const validLimitToken = await loadData(tokensFilePath);
-  const validLimitToken1 = await loadData(userTokensFilePath);
+  const validLimitTokenUser = await loadData(userTokensFilePath);
   const tokenBounded = validLimitToken.tokens.find(t => t.token === tokenAdmin);
-  const tokenBounded1 = validLimitToken1.tokens.find(t => t.id === userToken);
+  const tokenBoundedUser = validLimitTokenUser.tokens.find(t => t.id === userToken);
   if (tokenBounded.used.user > tokenBounded.limits.user || tokenBounded.used.chatGpt > tokenBounded.limits.chatGpt) {
     console.log('Превышен лимит использования токенов Админа');
     throw new Error('Превышен лимит использования токенов Админа.');
   }
-  if (tokenBounded1.tokens_gpt.user <= 0 || tokenBounded1.tokens_gpt.chatGpt <= 0) {
+  if (tokenBoundedUser.tokens_gpt <= 0) {
     console.log('Превышен лимит использования токенов Юзера');
     throw new Error('Превышен лимит использования токенов.');
   }
@@ -72,10 +72,9 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o', 
 
     tokenBounded.used.user += requestTokensUsed;
     tokenBounded.used.chatGpt += responseTokensUsed;
-    tokenBounded1.tokens_gpt.user = tokenBounded1.tokens_gpt.user - requestTokensUsed;
-    tokenBounded1.tokens_gpt.chatGpt = tokenBounded1.tokens_gpt.chatGpt - responseTokensUsed;
+    tokenBoundedUser.tokens_gpt = tokenBoundedUser.tokens_gpt - (requestTokensUsed+responseTokensUsed);
     await saveData(tokensFilePath, validLimitToken);
-    await saveData(userTokensFilePath, validLimitToken1);
+    await saveData(userTokensFilePath, validLimitTokenUser);
 
     if (!singleMessage) {
       const totalTokensUsed = requestTokensUsed + responseTokensUsed;
@@ -108,3 +107,5 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o', 
 }
 
 export { queryChatGPT };
+
+
