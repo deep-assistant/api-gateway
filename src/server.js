@@ -1,9 +1,10 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { queryChatGPT } from './api/chatgpt.js';
-import { initializeFiles, generateUserToken, syncContextData, requestBody, deleteFirstMessage, clearDialog, isValidAdminToken, isValidUserToken, loadData } from './utils/dbManager.js';
+import { initializeFiles, generateUserToken, syncContextData, requestBody, deleteFirstMessage, clearDialog, isValidAdminToken, isValidUserToken, loadData, saveData } from './utils/dbManager.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { log } from 'console';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,7 +73,7 @@ app.post('/generate-user-token', async (req, res) => {
   }
 
   try {
-    console.log('Запрос на создание токена для пользователя:', { userName });
+    console.log('Запрос на создание токена для пользователя:', userName );
     const newUserToken = await generateUserToken(userName);
 
     res.send({
@@ -90,34 +91,37 @@ app.post('/generate-user-token', async (req, res) => {
 });
 
 app.get('/user-tokens', async (req, res) => {
+  const { token, userName } = req.query; 
   if (!await isValidAdminToken(token)) {
-    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    res.status(401).send({ success: false, message: 'Invalid admin token' });
     return;
   }
 
   try {
     const tokensData = await loadData(userTokensFilePath);
     const tokenEntry = tokensData.tokens.find(t => t.id === userName);
+    console.log(tokenEntry)
     if (tokenEntry) {
       res.send({
         success: true,
-        id: tokenEntry.id, // возвращаем ID пользователя
-        tokens: tokenEntry.tokens_gpt // возвращаем токены
+        id: tokenEntry.id, // Возвращаем ID пользователя
+        tokens: tokenEntry.tokens_gpt // Возвращаем токены
       });
     } else {
       res.status(404).send({
         success: false,
-        message: 'Токен пользователя не найден'
+        message: 'User token not found'
       });
     }
   } catch (error) {
-    console.error('Ошибка при получении токенов:', error.message, error.stack);
+    console.error('Error retrieving tokens:', error.message, error.stack);
     res.status(500).send({
       success: false,
       message: error.message
     });
   }
 });
+
 
 
 // Эндпоинт для получения тела запроса истории диалога
@@ -169,6 +173,46 @@ app.post('/clear-dialog', async (req, res) => {
     });
   }
 });
+
+
+
+app.post('/update-user-token', async (req, res) => {
+  const { token, userName, newToken } = req.body;
+
+  if (!await isValidAdminToken(token)) {
+    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    return;
+  }
+
+  try {
+    const tokensData = await loadData(userTokensFilePath);
+    const userTokenEntry = tokensData.tokens.find(t => t.id === userName);
+    if (userTokenEntry) {
+      userTokenEntry.tokens_gpt = userTokenEntry.tokens_gpt + newToken;
+      await saveData(userTokensFilePath, tokensData);
+
+      res.send({
+        success: true,
+        message: `Токен пользователя ${userName} успешно обновлен`,
+        tokens: userTokenEntry.tokens_gpt
+      });
+    } else {
+      res.status(404).send({
+        success: false,
+        message: 'Токен пользователя не найден'
+      });
+    }
+  } catch (error) {
+    console.error('Ошибка при обновлении токена пользователя:', error.message, error.stack);
+    res.status(500).send({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
