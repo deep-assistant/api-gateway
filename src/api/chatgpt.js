@@ -3,6 +3,8 @@ import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { saveData, syncContextData, loadData, requestBody, deleteFirstMessage } from '../utils/dbManager.js';
+import OpenAI from "openai";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +14,15 @@ const dialogsFilePath = path.join(__dirname, '..', 'db', 'dialogs.json');
 const userTokensFilePath = path.join(__dirname, '..', 'db', 'user_tokens.json');
 
 let role = "";
+
+
+const openai = new OpenAI({
+  apiKey: process.env.FREE_OPENAI_KEY,
+  baseURL: "https://api.deepinfra.com/v1/openai",
+});
+const stream = false; // or true
+
+
 
 // Конфигурация для моделей
 const deploymentConfig = {
@@ -61,18 +72,34 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o', 
   const messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await syncContextData(dialogName, userMessage.content, role, systemMessage.content);
   
   try {
+    let response = {}
+    let gptReply = {}
+    let requestTokensUsed = {}
+    let responseTokensUsed = {}
+    if(model == 'Qwen/Qwen2-7B-Instruct'){
+      response = await openai.chat.completions.create({
+      messages: messageAllContextUser,
+      model: "Qwen/Qwen2-7B-Instruct",
+      stream: stream,
+    });
+    gptReply = response.choices[0].message.content.trim();
+    requestTokensUsed = response.usage.prompt_tokens;
+    responseTokensUsed = response.usage.completion_tokens;
+    }
+    else{
     const endpointAll = `${config.endpoint}openai/deployments/${config.modelName}/chat/completions?api-version=${config.apiVersion}`;
-    const response = await axios.post(endpointAll, { messages: messageAllContextUser }, {
+    response = await axios.post(endpointAll, { messages: messageAllContextUser }, {
       headers: { 'Content-Type': 'application/json', 'api-key': config.apiKey }
     });
-
-    const gptReply = response.data.choices[0].message.content.trim();
-    const requestTokensUsed = response.data.usage.prompt_tokens;
-    const responseTokensUsed = response.data.usage.completion_tokens;
+    gptReply = response.data.choices[0].message.content.trim();
+    requestTokensUsed = response.data.usage.prompt_tokens;
+    responseTokensUsed = response.data.usage.completion_tokens;
+  }
 
     tokenBounded.used.user += requestTokensUsed;
     tokenBounded.used.chatGpt += responseTokensUsed;
-    tokenBoundedUser.tokens_gpt = tokenBoundedUser.tokens_gpt - (requestTokensUsed+responseTokensUsed);
+    const allTokenSent = requestTokensUsed+responseTokensUsed
+    tokenBoundedUser.tokens_gpt = tokenBoundedUser.tokens_gpt - allTokenSent;
     await saveData(tokensFilePath, validLimitToken);
     await saveData(userTokensFilePath, validLimitTokenUser);
 
@@ -91,6 +118,7 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o', 
     return {
       success: true,
       response: gptReply,
+      allTokenSent,
       requestTokensUsed,
       responseTokensUsed,
       remainingUserTokens,

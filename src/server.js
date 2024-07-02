@@ -5,6 +5,11 @@ import { initializeFiles, generateUserToken, syncContextData, requestBody, delet
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { log } from 'console';
+import axios from 'axios';
+import fs from 'fs';
+import { pipeline }  from 'stream';
+import { promisify }  from 'util';
+const asyncPipeline = promisify(pipeline);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,7 +57,9 @@ app.post('/chatgpt', async (req, res) => {
     }
     res.send({
       success: true,
-      response: chatGptResponse.response
+      response: chatGptResponse.response,
+      token_spent: chatGptResponse.allTokenSent
+
     });
   } catch (error) {
     res.status(error.message.includes('Превышен лимит использования токенов.') ? 429 : 500).send({
@@ -176,9 +183,69 @@ app.post('/clear-dialog', async (req, res) => {
 
 
 
-app.post('/update-user-token', async (req, res) => {
-  const { token, userName, newToken } = req.body;
+app.post('/text-to-speech', async (req, res) => {
+  const { token, text } = req.body;
 
+  if (!await isValidAdminToken(token)) {
+    return res.status(401).send({ success: false, message: 'Invalid admin token' });
+  }
+
+  try {
+    const apiKey = process.env.AZURE_OPENAI_KEY_TTS; 
+    const url = process.env.AZURE_OPENAI_ENDPOINT_TTS;
+    const headers = {
+      "api-key": apiKey,
+      "Content-Type": "application/json"
+    };
+    const data = {
+      "model": "tts-hd",
+      "input": text,
+      "voice": "alloy"
+    };
+
+    const response = await axios.post(url, data, { headers, responseType: 'arraybuffer' });
+
+    if (response.status === 200) {
+      const filePath = path.join(__dirname, 'speech.ogg');
+      fs.writeFileSync(filePath, response.data);
+      console.log('Аудиофайл успешно сохранён как speech.ogg ', response.config.headers['Content-Length']);
+
+      let headersSent = false; // Инициализация контрольного флага
+
+      res.sendFile(filePath, err => {
+        if (err) {
+          console.error('Ошибка при отправке файла: ', err);
+          if (!headersSent) { // Проверка флага перед отправкой ответа
+            headersSent = true;
+            res.status(500).send({ success: false, message: 'Ошибка при отправке файла' });
+          }
+        } else {
+          const tokensUsed = response.config.headers['Content-Length']; // Примерное количество использованных токенов для текстового сообщения
+          console.log(`Использовано ${tokensUsed} токенов`);
+          if (!headersSent) { // Проверка флага перед отправкой ответа
+            headersSent = true;
+            res.status(201).json({
+              success: true,
+              tokensUsed: tokensUsed
+            });
+          }
+        }
+        fs.unlinkSync(filePath); // Удаляем файл после отправки
+      });
+    } else {
+      console.error('Ошибка при запросе к API: ', response.status, response.statusText);
+      res.status(response.status).send({ success: false, message: `Ошибка при запросе к API: ${response.statusText}` });
+    }
+  } catch (error) {
+    console.error('Ошибка при преобразовании текста в голос: ', error.message);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+
+
+app.post('/update-user-token', async (req, res) => {
+  const { token, userName, newToken, operation } = req.body;
   if (!await isValidAdminToken(token)) {
     res.status(401).send({ success: false, message: 'Неверный токен администратора' });
     return;
@@ -188,9 +255,13 @@ app.post('/update-user-token', async (req, res) => {
     const tokensData = await loadData(userTokensFilePath);
     const userTokenEntry = tokensData.tokens.find(t => t.id === userName);
     if (userTokenEntry) {
-      userTokenEntry.tokens_gpt = userTokenEntry.tokens_gpt + newToken;
+      if(operation == "add"){
+        userTokenEntry.tokens_gpt = userTokenEntry.tokens_gpt + newToken;
+      }
+      if(operation == "subtract"){
+        userTokenEntry.tokens_gpt = userTokenEntry.tokens_gpt - newToken;
+      }
       await saveData(userTokensFilePath, tokensData);
-
       res.send({
         success: true,
         message: `Токен пользователя ${userName} успешно обновлен`,
@@ -210,6 +281,8 @@ app.post('/update-user-token', async (req, res) => {
     });
   }
 });
+
+
 
 
 
