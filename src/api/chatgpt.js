@@ -2,8 +2,8 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { saveData, syncContextData, loadData, requestBody, deleteFirstMessage } from '../utils/dbManager.js';
-import OpenAI from 'openai';
+import { saveData, addNewMessage, addNewDialogs, loadData, requestBody, deleteFirstMessage } from '../utils/dbManager.js';
+import OpenAI from "openai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,8 +49,10 @@ async function queryChatGPT(userQuery, userToken, dialogName, model, systemMessa
   role = "user";
   const userMessage = { role: 'user', content: userQuery };
 
-  const messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await syncContextData(dialogName, userMessage.content, role, systemMessage.content);
-
+  let messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
+  if(messageAllContextUser==undefined){
+    messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
+  }
   try {
     let endpoint = '';
     if(model == 'Qwen/Qwen2-7B-Instruct'){
@@ -81,7 +83,7 @@ async function queryChatGPT(userQuery, userToken, dialogName, model, systemMessa
         await deleteFirstMessage(dialogName);
       }
       role = "assistant";
-      await syncContextData(dialogName, gptReply, role, systemMessage.content);
+      await addNewMessage(dialogName, gptReply, role, systemMessage.content);
     }
 
     const remainingUserTokens = tokenBounded.limits.user - tokenBounded.used.user;
