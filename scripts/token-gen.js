@@ -11,27 +11,15 @@ const argv = yargs(hideBin(process.argv))
     choices: ['admin', 'user'],
     demandOption: true,
   })
-  .option('expires', {
-    alias: 'e',
-    description: 'Дата истечения токена в формате ISO (только для admin)',
-    type: 'string',
-  })
   .option('userName', {
     alias: 'u',
     description: 'Имя пользователя (только для user)',
     type: 'string',
   })
-  .option('userTokenLimit', {
+  .option('token', {
     alias: 'ut',
-    description: 'Лимит токенов для пользователя',
-    type: 'number',
-    demandOption: true,
-  })
-  .option('chatGptTokenLimit', {
-    alias: 'ct',
-    description: 'Лимит токенов для ChatGPT',
-    type: 'number',
-    demandOption: true,
+    description: 'Количество токенов',
+    type: 'number'
   })
   .help()
   .alias('help', 'h')
@@ -42,7 +30,7 @@ const argv = yargs(hideBin(process.argv))
     try {
       if (argv.type === 'admin') {
         const expires = argv.expires || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
-        const newAdminToken = await generateAdminToken(expires, argv.userTokenLimit, argv.chatGptTokenLimit);
+        const newAdminToken = await generateAdminToken(argv.token);
         console.log(`Новый административный токен создан успешно: ${newAdminToken.token}`);
       } else if (argv.type === 'user') {
         if (!argv.userName) {

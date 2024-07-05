@@ -1,7 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { queryChatGPT } from './api/chatgpt.js';
-import { initializeFiles, generateUserToken, syncContextData, requestBody, deleteFirstMessage, clearDialog, isValidAdminToken, isValidUserToken, loadData, saveData } from './utils/dbManager.js';
+import { initializeFiles, generateUserToken,generateAdminToken, addNewMessage, addNewDialogs, requestBody, deleteFirstMessage, clearDialog, isValidAdminToken, isValidUserToken, loadData, saveData } from './utils/dbManager.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { log } from 'console';
@@ -9,6 +9,7 @@ import axios from 'axios';
 import fs from 'fs';
 import { pipeline }  from 'stream';
 import { promisify }  from 'util';
+import { multipartFormRequestOptions } from 'openai/uploads.mjs';
 const asyncPipeline = promisify(pipeline);
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,64 +71,89 @@ app.post('/chatgpt', async (req, res) => {
 });
 
 
-// Эндпоинт для создания ограниченного пользовательского токена
-app.post('/generate-user-token', async (req, res) => {
-  const { token, userName } = req.body;
+app.post('/generate-token', async (req, res) => {
+  const { admin_token, tokenNum, name, type } = req.body;
 
-  if (!await isValidAdminToken(token)) {
-    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
-    return;
+  if (type === 'admin') {
+    if (admin_token !== process.env.ADMIN_FIRST) {
+      return res.status(401).send({ success: false, message: 'Неверный токен главного администратора' });
+    }
+  }
+
+  if (!await isValidAdminToken(admin_token)) {
+    return res.status(401).send({ success: false, message: 'Неверный токен администратора' });
   }
 
   try {
-    console.log('Запрос на создание токена для пользователя:', userName );
-    const newUserToken = await generateUserToken(userName);
+    let newUserToken;
 
-    res.send({
+    if (type === 'admin') {
+      console.log('Запрос на создание токена для админа');
+      newUserToken = await generateAdminToken(tokenNum);
+    } else if (type === 'user') {
+      console.log('Запрос на создание токена для юзера:', name);
+      newUserToken = await generateUserToken(name);
+    } else {
+      return res.status(400).send({ success: false, message: 'Неверный тип пользователя' });
+    }
+    console.log(newUserToken, 'newUserToken----')
+    return res.send({
       success: true,
-      id: newUserToken.id, // возвращаем ID пользователя
-      tokens: newUserToken['tokens-gpt'] // возвращаем токены
+      tokenName: newUserToken.token,
+      tokensNum: newUserToken.tokens_gpt
     });
   } catch (error) {
-    console.error('Ошибка при создании токена для пользователя:', error.message, error.stack);
-    res.status(500).send({
+    console.error('Ошибка при создании токена:', error.message, error.stack);
+    return res.status(500).send({
       success: false,
       message: error.message
     });
   }
 });
 
-app.get('/user-tokens', async (req, res) => {
-  const { token, userName } = req.query; 
-  if (!await isValidAdminToken(token)) {
-    res.status(401).send({ success: false, message: 'Invalid admin token' });
-    return;
+
+app.get('/tokens', async (req, res) => {
+  const { admin_token, tokenName, type } = req.query;
+
+  if (!await isValidAdminToken(admin_token)) {
+    return res.status(401).send({ success: false, message: 'Invalid admin token' });
   }
 
   try {
-    const tokensData = await loadData(userTokensFilePath);
-    const tokenEntry = tokensData.tokens.find(t => t.id === userName);
+    let filePath;
+
+    if (type === 'admin') {
+      filePath = tokensFilePath;
+    } else if (type === 'user') {
+      filePath = userTokensFilePath;
+    } else {
+      return res.status(400).send({ success: false, message: 'Неверный тип пользователя' });
+    }
+
+    const tokensData = await loadData(filePath);
+    const tokenEntry = tokensData.tokens.find(t => t.token === tokenName);
     console.log(tokenEntry)
     if (tokenEntry) {
-      res.send({
+      return res.send({
         success: true,
-        id: tokenEntry.id, // Возвращаем ID пользователя
-        tokens: tokenEntry.tokens_gpt // Возвращаем токены
+        id: tokenEntry.token,
+        tokens: tokenEntry.tokens_gpt
       });
     } else {
-      res.status(404).send({
+      return res.status(404).send({
         success: false,
         message: 'User token not found'
       });
     }
   } catch (error) {
     console.error('Error retrieving tokens:', error.message, error.stack);
-    res.status(500).send({
+    return res.status(500).send({
       success: false,
       message: error.message
     });
   }
 });
+
 
 
 
@@ -183,6 +209,92 @@ app.post('/clear-dialog', async (req, res) => {
 
 
 
+app.post('/update-token', async (req, res) => {
+  const { tokenAdmin, userToken, addTokenNum, operation, type } = req.body;
+
+  if(type == 'admin'){
+    if (tokenAdmin != process.env.ADMIN_FIRST) {
+      res.status(401).send({ success: false, message: 'Неверный токен главного администратора' });
+      return;
+    }
+  }
+  if (!await isValidAdminToken(userToken)) {
+    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    return;
+  }
+
+
+  try {
+    let filePath;
+
+    if (type === 'admin') {
+      filePath = tokensFilePath;
+    } else if (type === 'user') {
+      filePath = userTokensFilePath;
+    } else {
+      return res.status(400).send({ success: false, message: 'Неверный тип пользователя' });
+    }
+    const tokensData = await loadData(filePath);
+    const userTokenEntry = tokensData.tokens.find(t => t.token === userToken);
+    if (userTokenEntry) {
+      if(operation == "add" || operation == undefined){
+        userTokenEntry.tokens_gpt = userTokenEntry.tokens_gpt + addTokenNum;
+      }
+      if(operation == "subtract"){
+        userTokenEntry.tokens_gpt = userTokenEntry.tokens_gpt - addTokenNum;
+      }
+      await saveData(filePath, tokensData);
+      res.send({
+        success: true,
+        message: `Токен пользователя ${userToken} успешно обновлен`,
+        tokens: userTokenEntry.tokens_gpt
+      });
+    } else {
+      res.status(404).send({
+        success: false,
+        message: 'Токен пользователя не найден'
+      });
+    }
+  } catch (error) {
+    console.error('Ошибка при обновлении токена пользователя:', error.message, error.stack);
+    res.status(500).send({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
+
+app.post('/add-admin-message', async (req, res) => {
+  const { token, dialogName, message } = req.body;
+  if (!await isValidAdminToken(token)) {
+    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    return;
+  }
+  console.log(message)
+  try {
+    let newDialog = false;
+    let messageHistory = await addNewMessage(dialogName, message, 'user', message)
+    if(messageHistory==undefined){
+      newDialog = true;
+      messageHistory = await addNewDialogs(dialogName, message, 'user', message)
+    }
+    res.send({
+      success: true,
+      message: message,
+      newDialog: newDialog 
+    });
+  } catch (error) {
+    console.error('Ошибка при добавления отдельного сообщения от админа', error.message, error.stack);
+    res.status(500).send({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
 app.post('/text-to-speech', async (req, res) => {
   const { token, text } = req.body;
 
@@ -210,28 +322,18 @@ app.post('/text-to-speech', async (req, res) => {
       fs.writeFileSync(filePath, response.data);
       console.log('Аудиофайл успешно сохранён как speech.ogg ', response.config.headers['Content-Length']);
 
-      let headersSent = false; // Инициализация контрольного флага
+      res.setHeader('Content-Type', 'audio/ogg');
+      res.setHeader('Content-Length', response.config.headers['Content-Length']);
 
-      res.sendFile(filePath, err => {
-        if (err) {
-          console.error('Ошибка при отправке файла: ', err);
-          if (!headersSent) { // Проверка флага перед отправкой ответа
-            headersSent = true;
-            res.status(500).send({ success: false, message: 'Ошибка при отправке файла' });
-          }
-        } else {
-          const tokensUsed = response.config.headers['Content-Length']; // Примерное количество использованных токенов для текстового сообщения
-          console.log(`Использовано ${tokensUsed} токенов`);
-          if (!headersSent) { // Проверка флага перед отправкой ответа
-            headersSent = true;
-            res.status(201).json({
-              success: true,
-              tokensUsed: tokensUsed
-            });
-          }
-        }
-        fs.unlinkSync(filePath); // Удаляем файл после отправки
-      });
+      await asyncPipeline(
+        fs.createReadStream(filePath),
+        res
+      );
+
+      const tokensUsed = response.config.headers['Content-Length']; // Примерное количество использованных токенов для текстового сообщения
+      console.log(`Использовано ${tokensUsed} токенов`);
+
+      fs.unlinkSync(filePath); // Удаляем файл после отправки
     } else {
       console.error('Ошибка при запросе к API: ', response.status, response.statusText);
       res.status(response.status).send({ success: false, message: `Ошибка при запросе к API: ${response.statusText}` });
@@ -241,50 +343,6 @@ app.post('/text-to-speech', async (req, res) => {
     res.status(500).send({ success: false, message: error.message });
   }
 });
-
-
-
-app.post('/update-user-token', async (req, res) => {
-  const { token, userName, newToken, operation } = req.body;
-  if (!await isValidAdminToken(token)) {
-    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
-    return;
-  }
-
-  try {
-    const tokensData = await loadData(userTokensFilePath);
-    const userTokenEntry = tokensData.tokens.find(t => t.id === userName);
-    if (userTokenEntry) {
-      if(operation == "add"){
-        userTokenEntry.tokens_gpt = userTokenEntry.tokens_gpt + newToken;
-      }
-      if(operation == "subtract"){
-        userTokenEntry.tokens_gpt = userTokenEntry.tokens_gpt - newToken;
-      }
-      await saveData(userTokensFilePath, tokensData);
-      res.send({
-        success: true,
-        message: `Токен пользователя ${userName} успешно обновлен`,
-        tokens: userTokenEntry.tokens_gpt
-      });
-    } else {
-      res.status(404).send({
-        success: false,
-        message: 'Токен пользователя не найден'
-      });
-    }
-  } catch (error) {
-    console.error('Ошибка при обновлении токена пользователя:', error.message, error.stack);
-    res.status(500).send({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-
-
-
 
 
 app.listen(PORT, () => {

@@ -67,7 +67,7 @@ async function generateUserToken(userName) {
 }
 
 
-async function generateAdminToken(expires, userTokenLimit, chatGptTokenLimit) {
+async function generateAdminToken(token=15000) {
   const tokensData = await loadData(tokensFilePath);
   if (!tokensData) {
     console.error('Ошибка при загрузке токенов админа.');
@@ -76,15 +76,7 @@ async function generateAdminToken(expires, userTokenLimit, chatGptTokenLimit) {
   
   const newToken = {
     token: crypto.randomBytes(16).toString('hex'),
-    expires,
-    limits: {
-      user: userTokenLimit,
-      chatGpt: chatGptTokenLimit,
-    },
-    used: {
-      user: 0,
-      chatGpt: 0,
-    },
+    'tokens_gpt': token
   };
   tokensData.tokens.push(newToken);
   await saveData(tokensFilePath, tokensData);
@@ -98,23 +90,35 @@ async function isValidUserToken(userName) {
 }
 
 // Функция синхронизации контекста данных
-async function syncContextData(dialogName, messageContent, senderRole, systemMessageContent = '') {
+async function addNewMessage(dialogName, messageContent, senderRole) {
   const dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) dialogsData = { dialogs: [] };
-
   let dialog = dialogsData.dialogs.find(d => d.name === dialogName);
   if (!dialog) {
-    dialog = {
-      name: dialogName,
-      messages: [{ role: 'system', content: systemMessageContent }]
-    };
-    dialogsData.dialogs.push(dialog);
+    return undefined
   }
   const newMessage = { role: senderRole, content: messageContent };
   dialog.messages.push(newMessage);
   await saveData(dialogsFilePath, dialogsData);
   return dialog.messages;
 }
+
+async function addNewDialogs(dialogName, messageContent, senderRole, systemMessageContent = '') {
+  const dialogsData = await loadData(dialogsFilePath);
+  if (!dialogsData) dialogsData = { dialogs: [] };
+  let dialog = {
+    name: dialogName,
+    messages: [{ role: 'system', content: systemMessageContent }]
+  };
+  dialogsData.dialogs.push(dialog);
+  
+  const newMessage = { role: senderRole, content: messageContent };
+  console.log(newMessage, '3333')
+  dialog.messages.push(newMessage);
+  await saveData(dialogsFilePath, dialogsData);
+  return dialog.messages;
+}
+
 
 // Функция удаления первого сообщения в диалоге
 async function deleteFirstMessage(dialogName) {
@@ -173,10 +177,11 @@ export {
   generateAdminToken,
   saveData,
   loadData,
-  syncContextData,
+  addNewMessage,
   requestBody,
   deleteFirstMessage,
   clearDialog,
   isValidAdminToken,
-  isValidUserToken
+  isValidUserToken, 
+  addNewDialogs
 };
