@@ -25,45 +25,12 @@ const openai_qwen = new OpenAI({
   baseURL: "https://api.deepinfra.com/v1/openai",
 });
 const stream = false; // or true
-
-
-const convertationEnergy = {
-  'gpt-4o-plus': 1,
-  'gpt-3.5-turbo': 15, 
-  'Qwen/Qwen2-7B-Instruct': 40
-}
-// Конфигурация для моделей
-const deploymentConfig = {
-  'gpt-4o-plus': {
-      modelName: 'gpt-4o-plus',
-      endpoint: openai,
-      convertationEnergy: 1
-  },
-  'gpt-3.5-turbo': {
-      modelName: 'gpt-3.5-turbo',
-      endpoint: openai,
-      convertationEnergy: 15
-  },
-  'Qwen/Qwen2-7B-Instruct': {
-      modelName: 'Qwen/Qwen2-7B-Instruct',
-      endpoint: openai_qwen,
-      convertationEnergy: 40
-  }
-};
-
-async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-plus', systemMessageContent = '', tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
-  const config = deploymentConfig[model]; 
-  
-  if (!config) {
-    console.error(`Deployment config for ${model} not found`);
-    return;
-  }
-
+async function queryChatGPT(userQuery, userToken, dialogName, model, systemMessageContent = '', tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
   const validLimitToken = await loadData(tokensFilePath);
   const validLimitTokenUser = await loadData(userTokensFilePath);
-  const tokenBounded = validLimitToken.tokens.find(t => t.id === tokenAdmin);
+  const tokenBounded = validLimitToken.tokens.find(t => t.token === tokenAdmin);
   const tokenBoundedUser = validLimitTokenUser.tokens.find(t => t.id === userToken);
-  if (tokenBounded.tokens_gpt <= 0) {
+  if (tokenBounded.used.user > tokenBounded.limits.user || tokenBounded.used.chatGpt > tokenBounded.limits.chatGpt) {
     console.log('Превышен лимит использования токенов Админа');
     throw new Error('Превышен лимит использования токенов Админа.');
   }
@@ -82,26 +49,26 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
   let messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
   if(messageAllContextUser==undefined){
     messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
-  }  
+  }
   try {
-    // if(model == 'Qwen/Qwen2-7B-Instruct'){
-    //   endpoint = openai_qwen
-    // }else{
-    //   endpoint = openai
-    // }
-    const endpoint = config.endpoint;
+    let endpoint = '';
+    if(model == 'Qwen/Qwen2-7B-Instruct'){
+      endpoint = openai_qwen
+    }else{
+      endpoint = openai
+    }
     const response = await endpoint.chat.completions.create({
       messages: messageAllContextUser,
-      model: config.modelName,
+      model: model,
       stream: stream,
     });
     const gptReply = response.choices[0].message.content.trim();
     const requestTokensUsed = response.usage.prompt_tokens;
     const responseTokensUsed = response.usage.completion_tokens;
 
-    let energyCoeff = config.convertationEnergy;
-    const allTokenSent = Math.round((requestTokensUsed+responseTokensUsed)/energyCoeff)
-    tokenBounded.tokens_gpt = tokenBounded.tokens_gpt - allTokenSent;
+    tokenBounded.used.user += requestTokensUsed;
+    tokenBounded.used.chatGpt += responseTokensUsed;
+    const allTokenSent = requestTokensUsed + responseTokensUsed;
     tokenBoundedUser.tokens_gpt = tokenBoundedUser.tokens_gpt - allTokenSent;
     await saveData(tokensFilePath, validLimitToken);
     await saveData(userTokensFilePath, validLimitTokenUser);
