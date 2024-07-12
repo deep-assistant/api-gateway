@@ -13,11 +13,11 @@ import {
   isValidAdminToken, 
   isValidUserToken, 
   loadData, 
-  saveData, 
-  addDefaultSystemMessages, 
+  saveData,
   addSystemMessage, 
   deleteSystemMessage, 
-  updateSystemMessage 
+  updateSystemMessage,
+  getAllSystemMessages 
 } from './utils/dbManager.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -53,7 +53,6 @@ async function checkAndGenerateUserToken(userName) {
   let userToken = tokensData.tokens.find(token => token.id === userName);
   if (!userToken) {
     userToken = await generateUserToken(userName); // Лимиты по умолчанию
-    await addDefaultSystemMessages(userName); // Добавление дефолтных системных сообщений
   }
   return userToken;
 }
@@ -79,9 +78,7 @@ app.post('/chatgpt', async (req, res) => {
 
   logs += '\n Отправка сообщения нейросети...'
   try {
-    // const systemMessagesData = await loadData(systemMessagesFilePath);
-    // const userMessages = systemMessagesData.users.find(u => u.userID === userToken);
-    // const systemMessage = userMessages?.messages.find(m => m.name_model === systemMessageName)?.content || '';
+
     const chatGptResponse = await queryChatGPT(query, userToken.id, dialogName, model, systemMessageName, tokenLimit, singleMessage, token);
     if (!chatGptResponse.success) {
       res.status(500).send({ success: false, message: chatGptResponse.error });
@@ -433,26 +430,6 @@ app.post('/text-to-speech', async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Новый маршрут для добавления системного сообщения
 app.post('/add-system-message', async (req, res) => {
   const { token, userId, messageContent, nameModel } = req.body;
@@ -463,6 +440,10 @@ app.post('/add-system-message', async (req, res) => {
   
   try {
     const result = await addSystemMessage(userId, messageContent, nameModel);
+    if(result == 1){
+      res.status(409).send({ success: false, message: "Контекстное сообщение с таким названием уже существует" });
+      return;
+    }
     res.send({ success: true, message: 'Системное сообщение добавлено', result });
   } catch (error) {
     console.error('Ошибка при добавлении системного сообщения:', error);
@@ -505,12 +486,6 @@ app.post('/update-system-message', async (req, res) => {
   }
 });
 
-
-
-
-
-
-
 // Новый маршрут для получения всех системных сообщений пользователя
 app.post('/get-all-system-messages', async (req, res) => {
   const { token, userId } = req.body;
@@ -527,13 +502,6 @@ app.post('/get-all-system-messages', async (req, res) => {
     res.status(500).send({ success: false, message: error.message });
   }
 });
-
-
-
-
-
-
-
 
 
 app.listen(PORT, () => {
