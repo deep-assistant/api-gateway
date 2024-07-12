@@ -1,0 +1,40 @@
+{
+  "defaultSystemMessage": [
+    "Привет",
+    "ты - человек",
+    "ты - нейросеть"
+  ],
+  "users": [
+    {
+      "userID": "exampleUser1",
+      "messages": [
+        {
+          "name_model": "system",
+          "content": "Welcome to our service!"
+        },
+        {
+          "name_model": "test",
+          "content": "You can ask me anything."
+        }
+      ]
+    },
+    {
+      "userID": "exampleUser2",
+      "messages": [
+        {
+          "name_model": "system",
+          "content": "Hello! How can I assist you today?"
+        }
+      ]
+    },
+    {
+      "userID": "677bafc4f788f69d1f23c1881d494a95",
+      "messages": [
+        {
+          "name_model": "system",
+          "content": "какая ты модель? какое было мое прошлое сообщение?"
+        }
+      ]
+    }
+  ]
+}

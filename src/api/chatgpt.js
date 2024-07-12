@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 const tokensFilePath = path.join(__dirname, '..', 'db', 'tokens.json');
 const dialogsFilePath = path.join(__dirname, '..', 'db', 'dialogs.json');
 const userTokensFilePath = path.join(__dirname, '..', 'db', 'user_tokens.json');
+const systemMessagesFilePath = path.join(__dirname, '..', 'db', 'system_messages.json');
 
 let role = "";
 
@@ -77,6 +78,7 @@ const deploymentConfig = {
   }
 };
 
+
 async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-plus', systemMessageContent = '', tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
   const config = deploymentConfig[model]; 
   
@@ -102,13 +104,19 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
     singleMessage = true;
   }
 
-  const systemMessage = { role: 'system', content: systemMessageContent || 'You are chatting with an AI assistant.' };
-  role = "user";
+  const systemMessagesData = await loadData(systemMessagesFilePath);
+  const userSystemMessages = systemMessagesData?.users.find(u => u.userID === userToken)?.messages || [];
+
+  const systemMessages = userSystemMessages.length > 0 ? userSystemMessages : [{ role: 'system', content: systemMessageContent || 'You are chatting with an AI assistant.' }];
+  
   const userMessage = { role: 'user', content: userQuery };
-  let messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
-  if(messageAllContextUser==undefined){
-    messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
-  }  
+  role = "user";
+  let messageAllContextUser = singleMessage ? [...systemMessages, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessages.map(msg => msg.content).join(' '));
+  
+  if (messageAllContextUser === undefined) {
+    messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessages.map(msg => msg.content).join(' '));
+  }
+
   try {
     const endpoint = config.endpoint;
     const response = await endpoint.chat.completions.create({
@@ -121,9 +129,9 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
     const responseTokensUsed = response.usage.completion_tokens;
 
     let energyCoeff = config.convertationEnergy;
-    const allTokenSent = Math.round((requestTokensUsed+responseTokensUsed)/energyCoeff)
-    tokenBounded.tokens_gpt = tokenBounded.tokens_gpt - allTokenSent;
-    tokenBoundedUser.tokens_gpt = tokenBoundedUser.tokens_gpt - allTokenSent;
+    const allTokenSent = Math.round((requestTokensUsed + responseTokensUsed) / energyCoeff);
+    tokenBounded.tokens_gpt -= allTokenSent;
+    tokenBoundedUser.tokens_gpt -= allTokenSent;
     await saveData(tokensFilePath, validLimitToken);
     await saveData(userTokensFilePath, validLimitTokenUser);
 
@@ -133,9 +141,8 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
         await deleteFirstMessage(dialogName);
       }
       role = "assistant";
-      await addNewMessage(dialogName, gptReply, role, systemMessage.content);
+      await addNewMessage(dialogName, gptReply, role, systemMessages.map(msg => msg.content).join(' '));
     }
-
 
     return {
       success: true,
@@ -153,5 +160,7 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
     };
   }
 }
+
+
 
 export { queryChatGPT };

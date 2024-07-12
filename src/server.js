@@ -1,7 +1,24 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { queryChatGPT } from './api/chatgpt.js';
-import { initializeFiles, generateUserToken, generateAdminToken, addNewMessage, addNewDialogs, requestBody, deleteFirstMessage, clearDialog, isValidAdminToken, isValidUserToken, loadData, saveData } from './utils/dbManager.js';
+import {  
+  initializeFiles, 
+  generateUserToken, 
+  generateAdminToken, 
+  addNewMessage, 
+  addNewDialogs, 
+  requestBody, 
+  deleteFirstMessage, 
+  clearDialog, 
+  isValidAdminToken, 
+  isValidUserToken, 
+  loadData, 
+  saveData, 
+  addDefaultSystemMessages, 
+  addSystemMessage, 
+  deleteSystemMessage, 
+  updateSystemMessage 
+} from './utils/dbManager.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { log } from 'console';
@@ -19,6 +36,7 @@ const __dirname = path.dirname(__filename);
 const tokensFilePath = path.join(__dirname, 'db', 'tokens.json');
 const dialogsFilePath = path.join(__dirname, 'db', 'dialogs.json');
 const userTokensFilePath = path.join(__dirname, 'db', 'user_tokens.json');
+const systemMessagesFilePath = path.join(__dirname, 'db', 'system_messages.json');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -35,9 +53,12 @@ async function checkAndGenerateUserToken(userName) {
   let userToken = tokensData.tokens.find(token => token.id === userName);
   if (!userToken) {
     userToken = await generateUserToken(userName); // Лимиты по умолчанию
+    await addDefaultSystemMessages(userName); // Добавление дефолтных системных сообщений
   }
   return userToken;
 }
+
+
 
 app.post('/chatgpt', async (req, res) => {
   const { token, query, dialogName, model, systemMessageContent, tokenLimit, singleMessage, userNameToken } = req.body;
@@ -401,6 +422,94 @@ app.post('/text-to-speech', async (req, res) => {
     });
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Новый маршрут для добавления системного сообщения
+app.post('/add-system-message', async (req, res) => {
+  const { token, userId, messageContent } = req.body;
+  if (!await isValidAdminToken(token)) {
+    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    return;
+  }
+  
+  try {
+    const result = await addSystemMessage(userId, messageContent);
+    res.send({ success: true, message: 'Системное сообщение добавлено', result });
+  } catch (error) {
+    console.error('Ошибка при добавлении системного сообщения:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// Новый маршрут для удаления системного сообщения
+app.post('/delete-system-message', async (req, res) => {
+  const { token, userId, messageId } = req.body;
+  if (!await isValidAdminToken(token)) {
+    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    return;
+  }
+  
+  try {
+    const result = await deleteSystemMessage(userId, messageId);
+    res.send({ success: true, message: 'Системное сообщение удалено', result });
+  } catch (error) {
+    console.error('Ошибка при удалении системного сообщения:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// Новый маршрут для обновления системного сообщения
+app.post('/update-system-message', async (req, res) => {
+  const { token, userId, messageId, newContent } = req.body;
+  if (!await isValidAdminToken(token)) {
+    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    return;
+  }
+  
+  try {
+    const result = await updateSystemMessage(userId, messageId, newContent);
+    res.send({ success: true, message: 'Системное сообщение обновлено', result });
+  } catch (error) {
+    console.error('Ошибка при обновлении системного сообщения:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

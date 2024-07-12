@@ -6,14 +6,14 @@ import crypto from 'crypto';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Исправленные пути к JSON файлам
 const tokensFilePath = path.join(__dirname, '..', 'db', 'tokens.json');
 const dialogsFilePath = path.join(__dirname, '..', 'db', 'dialogs.json');
 const userTokensFilePath = path.join(__dirname, '..', 'db', 'user_tokens.json');
+const systemMessagesFilePath = path.join(__dirname, '..', 'db', 'system_messages.json');
 
 // Инициализация JSON-файлов, если они отсутствуют
 async function initializeFiles() {
-  const files = [tokensFilePath, dialogsFilePath, userTokensFilePath];
+  const files = [tokensFilePath, dialogsFilePath, userTokensFilePath, systemMessagesFilePath];
   for (const file of files) {
     try {
       await fs.access(file);
@@ -44,6 +44,7 @@ async function loadData(filePath) {
     return null;
   }
 }
+
 
 // Генерация токена пользователя с начальным количеством токенов
 async function generateUserToken(userName) {
@@ -120,6 +121,9 @@ async function addNewDialogs(dialogName, messageContent, senderRole, systemMessa
 }
 
 
+
+
+
 // Функция удаления первого сообщения в диалоге
 async function deleteFirstMessage(dialogName) {
   const dialogsData = await loadData(dialogsFilePath);
@@ -171,6 +175,89 @@ async function isValidAdminToken(providedToken) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Добавление дефолтных системных сообщений
+async function addDefaultSystemMessages(username) {
+  const defaultMessagesData = await loadData(defaultSystemMessagesFilePath);
+  if (!defaultMessagesData) {
+    console.error('Ошибка при загрузке дефолтных системных сообщений.');
+    return;
+  }
+
+  const systemMessagesData = await loadData(systemMessagesFilePath);
+  if (!systemMessagesData) systemMessagesData = { users: [] };
+
+  const userMessages = {
+    userID: username,
+    messages: defaultMessagesData.defaultMessages
+  };
+  
+  systemMessagesData.users.push(userMessages);
+  await saveData(systemMessagesFilePath, systemMessagesData);
+}
+
+// Добавление системного сообщения для пользователя
+async function addSystemMessage(userId, messageContent) {
+  const systemMessagesData = await loadData(systemMessagesFilePath);
+  if (!systemMessagesData) systemMessagesData = { users: [] };
+  
+  let userMessages = systemMessagesData.users.find(u => u.userID === userId);
+  if (!userMessages) {
+    userMessages = { userID: userId, messages:  []};
+    systemMessagesData.users.push(userMessages);
+  }
+  
+  const newMessage = { id: crypto.randomBytes(16).toString('hex'), role: 'system', content: messageContent };
+  userMessages.messages.push(newMessage);
+  await saveData(systemMessagesFilePath, systemMessagesData);
+  return newMessage;
+}
+
+// Удаление системного сообщения пользователя
+async function deleteSystemMessage(userId, messageId) {
+  const systemMessagesData = await loadData(systemMessagesFilePath);
+  if (!systemMessagesData) return null;
+  
+  const userMessages = systemMessagesData.users.find(u => u.userID === userId);
+  if (!userMessages) return null;
+  
+  userMessages.messages = userMessages.messages.filter(msg => msg.id !== messageId);
+  await saveData(systemMessagesFilePath, systemMessagesData);
+  return true;
+}
+
+// Обновление системного сообщения пользователя
+async function updateSystemMessage(userId, messageId, newContent) {
+  const systemMessagesData = await loadData(systemMessagesFilePath);
+  if (!systemMessagesData) return null;
+  
+  const userMessages = systemMessagesData.users.find(u => u.userID === userId);
+  if (!userMessages) return null;
+  
+  const message = userMessages.messages.find(msg => msg.id === messageId);
+  if (message) {
+    message.content = newContent;
+    await saveData(systemMessagesFilePath, systemMessagesData);
+    return message;
+  }
+  
+  return null;
+}
+
+
 export {
   initializeFiles,
   generateUserToken,
@@ -182,6 +269,10 @@ export {
   deleteFirstMessage,
   clearDialog,
   isValidAdminToken,
-  isValidUserToken, 
-  addNewDialogs
+  isValidUserToken,
+  addNewDialogs,
+  addDefaultSystemMessages,
+  addSystemMessage,
+  deleteSystemMessage,
+  updateSystemMessage
 };
