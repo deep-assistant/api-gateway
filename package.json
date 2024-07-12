@@ -1,20 +1,21 @@
- {
+{
     "name": "resale-chatgpt-azure",
     "type": "module",
     "version": "1.0.0",
     "description": "Прокси сервер для взаимодействия с ChatGPT на Azure с управлением доступом через токены",
     "main": "src/server.js",
     "scripts": {
-      "start": "node src/server.js",
-      "generate-token": "node scripts/token-gen.js"
+        "start": "node src/server.js",
+        "generate-token": "node scripts/token-gen.js"
     },
     "dependencies": {
-      "axios": "^0.27.2",
-      "express": "^4.18.1",
-      "body-parser": "^1.20.0",
-      "dotenv": "^16.0.1",
-      "yargs": "^17.5.1"
+        "axios": "^0.27.2",
+        "body-parser": "^1.20.0",
+        "dotenv": "^16.0.1",
+        "express": "^4.18.1",
+        "openai": "^4.52.7",
+        "yargs": "^17.5.1"
     },
     "author": "TimaxLacs",
     "license": "ISC"
-  }
+}
