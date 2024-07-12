@@ -174,39 +174,27 @@ async function isValidAdminToken(providedToken) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Добавление системного сообщения для пользователя
-async function addSystemMessage(userId, messageContent, nameModel) {
+async function addSystemMessage(userId, messageContent, messageName) {
   const systemMessagesData = await loadData(systemMessagesFilePath);
   if (!systemMessagesData) systemMessagesData = { users: [] };
   
-  let userMessages = systemMessagesData.users.find(u => u.userID === userId);
+  let userMessages = systemMessagesData.users?.find(u => u.userID === userId);
+
+  const message = userMessages?.messages?.find(msg => msg.name_model === messageName);
+  if(message) return 1
+
   if (!userMessages) {
     userMessages = { userID: userId, messages: [] };
     systemMessagesData.users.push(userMessages);
   }
   
-  const newMessage = { name_model: nameModel, content: messageContent };
+  const newMessage = { name_model: messageName, content: messageContent };
   userMessages.messages.push(newMessage);
   await saveData(systemMessagesFilePath, systemMessagesData);
   return newMessage;
 }
+
 
 // Обновление системного сообщения пользователя
 async function updateSystemMessage(userId, messageName, newContent) {
@@ -244,41 +232,20 @@ async function deleteSystemMessage(userId, messageName) {
 
 
 
-
-// Добавление дефолтных системных сообщений
-async function addDefaultSystemMessages(username) {
-  const systemMessagesData = await loadData(systemMessagesFilePath);
-  if (!systemMessagesData) {
-    console.error('Ошибка при загрузке системных сообщений.');
-    return;
-  }
-
-  const defaultMessages = systemMessagesData.defaultSystemMessage.map(message => ({
-    name_model: "system",
-    content: message
-  }));
-
-  let userMessages = systemMessagesData.users.find(u => u.userID === username);
-  if (!userMessages) {
-    userMessages = {
-      userID: username,
-      messages: defaultMessages
-    };
-    systemMessagesData.users.push(userMessages);
-  } else {
-    userMessages.messages.push(...defaultMessages);
-  }
-
-  await saveData(systemMessagesFilePath, systemMessagesData);
-}
-
 // Получение всех системных сообщений пользователя
 async function getAllSystemMessages(userId) {
   const systemMessagesData = await loadData(systemMessagesFilePath);
   if (!systemMessagesData) return null;
-  
+
+  // Находим пользователя
   const userMessages = systemMessagesData.users.find(u => u.userID === userId);
-  return userMessages ? userMessages.messages : [];
+
+  // Если пользователь найден, извлекаем все сообщения
+  if (userMessages) {
+    return userMessages.messages; 
+  } else {
+    return []; // Возвращаем пустой массив, если пользователь не найден
+  }
 }
 
 export {
@@ -294,7 +261,6 @@ export {
   isValidAdminToken,
   isValidUserToken,
   addNewDialogs,
-  addDefaultSystemMessages,
   addSystemMessage,
   deleteSystemMessage,
   updateSystemMessage,
