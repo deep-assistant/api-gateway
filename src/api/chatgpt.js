@@ -107,18 +107,12 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
   const systemMessagesData = await loadData(systemMessagesFilePath);
 
   let userSystemMessages = systemMessagesData?.defaultSystemMessage.find(item => item.name_model === systemMessageName); 
-
- if (!userSystemMessages) {
-  userSystemMessages = systemMessagesData?.users.find(user => user.userID === userToken)?.messages.find(message => message.name_model === systemMessageName);
+  if (userSystemMessages == undefined) {
+    userSystemMessages = systemMessagesData?.users.find(user => user.userID === userToken)?.messages.find(message => message.name_model === systemMessageName);
   }
-
   userSystemMessages = userSystemMessages ? userSystemMessages.content : 'You are chatting with an AI assistant.';
 
-  console.log(systemMessageName, 'systemMessageName')
-  console.log(systemMessagesData, 'systemMessagesData')
-  console.log(userSystemMessages, 'userSystemMessages')
-  const systemMessage = { role: 'system', content: userSystemMessages || 'You are chatting with an AI assistant.' };
-
+  const systemMessage = { role: 'system', content: userSystemMessages };
   role = "user";
   const userMessage = { role: 'user', content: userQuery };
   let messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
