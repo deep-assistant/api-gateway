@@ -61,7 +61,7 @@ async function checkAndGenerateUserToken(userName) {
 
 
 app.post('/chatgpt', async (req, res) => {
-  const { token, query, dialogName, model, systemMessageContent, tokenLimit, singleMessage, userNameToken } = req.body;
+  const { token, query, dialogName, model, systemMessageName, tokenLimit, singleMessage, userNameToken } = req.body;
   let logs = '\n Проверка токена админа...'
   if (!await isValidAdminToken(token)) {
     res.status(401).send({ success: false, message: 'Неверный токен администратора' });
@@ -76,9 +76,13 @@ app.post('/chatgpt', async (req, res) => {
     logs += `\n Создан новый пользователь ${tokensData}`
   } else logs += `\n Пользователь с id "${userNameToken}" найден`
 
+
   logs += '\n Отправка сообщения нейросети...'
   try {
-    const chatGptResponse = await queryChatGPT(query, userToken.id, dialogName, model, systemMessageContent, tokenLimit, singleMessage, token);
+    // const systemMessagesData = await loadData(systemMessagesFilePath);
+    // const userMessages = systemMessagesData.users.find(u => u.userID === userToken);
+    // const systemMessage = userMessages?.messages.find(m => m.name_model === systemMessageName)?.content || '';
+    const chatGptResponse = await queryChatGPT(query, userToken.id, dialogName, model, systemMessageName, tokenLimit, singleMessage, token);
     if (!chatGptResponse.success) {
       res.status(500).send({ success: false, message: chatGptResponse.error });
       return;
@@ -98,6 +102,10 @@ app.post('/chatgpt', async (req, res) => {
     });
   }
 });
+
+
+
+
 
 app.post('/generate-token', async (req, res) => {
   const { admin_token, tokenNum, userName, type } = req.body;
@@ -447,14 +455,14 @@ app.post('/text-to-speech', async (req, res) => {
 
 // Новый маршрут для добавления системного сообщения
 app.post('/add-system-message', async (req, res) => {
-  const { token, userId, messageContent } = req.body;
+  const { token, userId, messageContent, nameModel } = req.body;
   if (!await isValidAdminToken(token)) {
     res.status(401).send({ success: false, message: 'Неверный токен администратора' });
     return;
   }
   
   try {
-    const result = await addSystemMessage(userId, messageContent);
+    const result = await addSystemMessage(userId, messageContent, nameModel);
     res.send({ success: true, message: 'Системное сообщение добавлено', result });
   } catch (error) {
     console.error('Ошибка при добавлении системного сообщения:', error);
@@ -464,14 +472,14 @@ app.post('/add-system-message', async (req, res) => {
 
 // Новый маршрут для удаления системного сообщения
 app.post('/delete-system-message', async (req, res) => {
-  const { token, userId, messageId } = req.body;
+  const { token, userId, messageName } = req.body;
   if (!await isValidAdminToken(token)) {
     res.status(401).send({ success: false, message: 'Неверный токен администратора' });
     return;
   }
   
   try {
-    const result = await deleteSystemMessage(userId, messageId);
+    const result = await deleteSystemMessage(userId, messageName);
     res.send({ success: true, message: 'Системное сообщение удалено', result });
   } catch (error) {
     console.error('Ошибка при удалении системного сообщения:', error);
@@ -479,16 +487,17 @@ app.post('/delete-system-message', async (req, res) => {
   }
 });
 
+
 // Новый маршрут для обновления системного сообщения
 app.post('/update-system-message', async (req, res) => {
-  const { token, userId, messageId, newContent } = req.body;
+  const { token, userId, messageName, newContent } = req.body;
   if (!await isValidAdminToken(token)) {
     res.status(401).send({ success: false, message: 'Неверный токен администратора' });
     return;
   }
   
   try {
-    const result = await updateSystemMessage(userId, messageId, newContent);
+    const result = await updateSystemMessage(userId, messageName, newContent);
     res.send({ success: true, message: 'Системное сообщение обновлено', result });
   } catch (error) {
     console.error('Ошибка при обновлении системного сообщения:', error);
@@ -502,6 +511,22 @@ app.post('/update-system-message', async (req, res) => {
 
 
 
+// Новый маршрут для получения всех системных сообщений пользователя
+app.post('/get-all-system-messages', async (req, res) => {
+  const { token, userId } = req.body;
+  if (!await isValidAdminToken(token)) {
+    res.status(401).send({ success: false, message: 'Неверный токен администратора' });
+    return;
+  }
+  
+  try {
+    const messages = await getAllSystemMessages(userId);
+    res.send({ success: true, messages });
+  } catch (error) {
+    console.error('Ошибка при получении системных сообщений:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
 
 
 

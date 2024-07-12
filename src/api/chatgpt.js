@@ -29,7 +29,6 @@ const stream = false; // or true
 
 
 
-// Конфигурация для моделей
 const deploymentConfig = {
   'gpt-4o-plus': {
       modelName: 'gpt-4o-plus',
@@ -79,7 +78,8 @@ const deploymentConfig = {
 };
 
 
-async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-plus', systemMessageContent = '', tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
+
+async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-plus', systemMessageName, tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
   const config = deploymentConfig[model]; 
   
   if (!config) {
@@ -105,16 +105,27 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
   }
 
   const systemMessagesData = await loadData(systemMessagesFilePath);
-  const userSystemMessages = systemMessagesData?.users.find(u => u.userID === userToken)?.messages || [];
 
-  const systemMessages = userSystemMessages.length > 0 ? userSystemMessages : [{ role: 'system', content: systemMessageContent || 'You are chatting with an AI assistant.' }];
-  
-  const userMessage = { role: 'user', content: userQuery };
+  let userSystemMessages = systemMessagesData?.defaultSystemMessage.find(item => item.name_model === systemMessageName); 
+
+ if (!userSystemMessages) {
+  userSystemMessages = systemMessagesData?.users.find(user => user.userID === userToken)?.messages.find(message => message.name_model === systemMessageName);
+  }
+
+  userSystemMessages = userSystemMessages ? userSystemMessages.content : 'You are chatting with an AI assistant.';
+
+  console.log(systemMessageName, 'systemMessageName')
+  console.log(systemMessagesData, 'systemMessagesData')
+  console.log(userSystemMessages, 'userSystemMessages')
+  const systemMessage = { role: 'system', content: userSystemMessages || 'You are chatting with an AI assistant.' };
+
   role = "user";
-  let messageAllContextUser = singleMessage ? [...systemMessages, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessages.map(msg => msg.content).join(' '));
+  const userMessage = { role: 'user', content: userQuery };
+  let messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
+
   
   if (messageAllContextUser === undefined) {
-    messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessages.map(msg => msg.content).join(' '));
+    messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, userSystemMessages);
   }
 
   try {
@@ -129,11 +140,12 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
     const responseTokensUsed = response.usage.completion_tokens;
 
     let energyCoeff = config.convertationEnergy;
-    const allTokenSent = Math.round((requestTokensUsed + responseTokensUsed) / energyCoeff);
-    tokenBounded.tokens_gpt -= allTokenSent;
-    tokenBoundedUser.tokens_gpt -= allTokenSent;
+    const allTokenSent = Math.round((requestTokensUsed+responseTokensUsed)/energyCoeff)
+    tokenBounded.tokens_gpt = tokenBounded.tokens_gpt - allTokenSent;
+    tokenBoundedUser.tokens_gpt = tokenBoundedUser.tokens_gpt - allTokenSent;
     await saveData(tokensFilePath, validLimitToken);
     await saveData(userTokensFilePath, validLimitTokenUser);
+
 
     if (!singleMessage) {
       const totalTokensUsed = requestTokensUsed + responseTokensUsed;
@@ -141,7 +153,7 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
         await deleteFirstMessage(dialogName);
       }
       role = "assistant";
-      await addNewMessage(dialogName, gptReply, role, systemMessages.map(msg => msg.content).join(' '));
+      await addNewMessage(dialogName, gptReply, role, userSystemMessages);
     }
 
     return {
