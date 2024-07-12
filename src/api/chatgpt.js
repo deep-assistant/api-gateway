@@ -2,9 +2,8 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { saveData, addNewMessage, addNewDialogs,  loadData, requestBody, deleteFirstMessage } from '../utils/dbManager.js';
+import { saveData, addNewMessage, addNewDialogs, loadData, requestBody, deleteFirstMessage } from '../utils/dbManager.js';
 import OpenAI from "openai";
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,37 +14,71 @@ const userTokensFilePath = path.join(__dirname, '..', 'db', 'user_tokens.json');
 
 let role = "";
 
-
 const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+});
+
+
+const openai_deepinfra = new OpenAI({
   apiKey: process.env.FREE_OPENAI_KEY,
   baseURL: "https://api.deepinfra.com/v1/openai",
 });
 const stream = false; // or true
 
 
-const convertationEnergy = {
-  'gpt-4o': 1,
-  'gpt-35-16k': 15, 
-  'Qwen/Qwen2-7B-Instruct': 40
-}
+
 // Конфигурация для моделей
 const deploymentConfig = {
-  'gpt-4o': {
-      modelName: 'gpt-4o',
-      endpoint: 'https://deep-ai-west-us-3.openai.azure.com/',
-      apiKey: process.env.AZURE_OPENAI_KEY,
-      apiVersion: '2023-03-15-preview'
+  'gpt-4o-plus': {
+      modelName: 'gpt-4o-plus',
+      endpoint: openai,
+      convertationEnergy: 1
   },
-  'gpt-35-16k': {
-      modelName: 'gpt-35-16k',
-      endpoint: 'https://deep-ai.openai.azure.com/',
-      apiKey: process.env.AZURE_OPENAI_KEY_3,     
-      apiVersion: '2023-03-15-preview'
+  'nvidia/Nemotron-4-340B-Instruct': {
+      modelName: 'nvidia/Nemotron-4-340B-Instruct',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 1.2
+  },
+  'meta-llama/Meta-Llama-3-70B-Instruct': {
+      modelName: 'meta-llama/Meta-Llama-3-70B-Instruct',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 3.5
+  },
+  'deepinfra/deepinfra2-72B-Instruct': {
+      modelName: 'deepinfra/deepinfra2-72B-Instruct',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 3.5
+  },
+  'codellama/CodeLlama-70b-Instruct-hf': {
+      modelName: 'codellama/CodeLlama-70b-Instruct-hf',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 3.5
+  },
+  'microsoft/WizardLM-2-8x22B': {
+      modelName: 'microsoft/WizardLM-2-8x22B',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 3.5
+  },
+  'gpt-3.5-turbo': {
+      modelName: 'gpt-3.5-turbo',
+      endpoint: openai,
+      convertationEnergy: 15
+  },
+  'meta-llama/Meta-Llama-3-8B-Instruct': {
+      modelName: 'meta-llama/Meta-Llama-3-8B-Instruct',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 50
+  },
+  'microsoft/WizardLM-2-7B': {
+      modelName: 'microsoft/WizardLM-2-7B',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 50
   }
 };
 
-async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o', systemMessageContent = '', tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
-  const config = deploymentConfig[model] || deploymentConfig['gpt-4o']; 
+async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-plus', systemMessageContent = '', tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
+  const config = deploymentConfig[model]; 
   
   if (!config) {
     console.error(`Deployment config for ${model} not found`);
@@ -54,7 +87,7 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o', 
 
   const validLimitToken = await loadData(tokensFilePath);
   const validLimitTokenUser = await loadData(userTokensFilePath);
-  const tokenBounded = validLimitToken.tokens.find(t => t.token === tokenAdmin);
+  const tokenBounded = validLimitToken.tokens.find(t => t.id === tokenAdmin);
   const tokenBoundedUser = validLimitTokenUser.tokens.find(t => t.id === userToken);
   if (tokenBounded.tokens_gpt <= 0) {
     console.log('Превышен лимит использования токенов Админа');
@@ -75,33 +108,19 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o', 
   let messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
   if(messageAllContextUser==undefined){
     messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
-  }  try {
-    let response = {}
-    let gptReply = {}
-    let requestTokensUsed = {}
-    let responseTokensUsed = {}
-    if(model == 'Qwen/Qwen2-7B-Instruct'){
-      response = await openai.chat.completions.create({
+  }  
+  try {
+    const endpoint = config.endpoint;
+    const response = await endpoint.chat.completions.create({
       messages: messageAllContextUser,
-      model: "Qwen/Qwen2-7B-Instruct",
+      model: config.modelName,
       stream: stream,
-      });
-      gptReply = response.choices[0].message.content.trim();
-      requestTokensUsed = response.usage.prompt_tokens;
-      responseTokensUsed = response.usage.completion_tokens;
-    }
-    else{
-      const endpointAll = `${config.endpoint}openai/deployments/${config.modelName}/chat/completions?api-version=${config.apiVersion}`;
-      response = await axios.post(endpointAll, { messages: messageAllContextUser }, {
-        headers: { 'Content-Type': 'application/json', 'api-key': config.apiKey }
-      });
-      gptReply = response.data.choices[0].message.content.trim();
-      requestTokensUsed = response.data.usage.prompt_tokens;
-      responseTokensUsed = response.data.usage.completion_tokens;
-    }
-    // tokenBounded.used.user += requestTokensUsed;
-    // tokenBounded.used.chatGpt += responseTokensUsed;
-    let energyCoeff = convertationEnergy[model];
+    });
+    const gptReply = response.choices[0].message.content.trim();
+    const requestTokensUsed = response.usage.prompt_tokens;
+    const responseTokensUsed = response.usage.completion_tokens;
+
+    let energyCoeff = config.convertationEnergy;
     const allTokenSent = Math.round((requestTokensUsed+responseTokensUsed)/energyCoeff)
     tokenBounded.tokens_gpt = tokenBounded.tokens_gpt - allTokenSent;
     tokenBoundedUser.tokens_gpt = tokenBoundedUser.tokens_gpt - allTokenSent;
@@ -136,5 +155,3 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o', 
 }
 
 export { queryChatGPT };
-
-

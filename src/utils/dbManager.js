@@ -75,7 +75,7 @@ async function generateAdminToken(token=15000) {
   }
   
   const newToken = {
-    token: crypto.randomBytes(16).toString('hex'),
+    id: crypto.randomBytes(16).toString('hex'),
     'tokens_gpt': token
   };
   tokensData.tokens.push(newToken);
@@ -166,7 +166,7 @@ async function clearDialog(dialogName) {
 // Проверка, является ли предоставленный токен валидным администраторским токеном
 async function isValidAdminToken(providedToken) {
   const tokensData = await loadData(tokensFilePath);
-  return tokensData?.tokens.some(tokenEntry => tokenEntry.token === providedToken);
+  return tokensData?.tokens.some(tokenEntry => tokenEntry.id === providedToken);
 }
 
 
