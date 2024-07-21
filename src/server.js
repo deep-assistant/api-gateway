@@ -60,10 +60,21 @@ app.post('/chatgpt', async (req, res) => {
     const newTokenLimit = tokenLimit+999999999
     logs += `\n Пробую модель ${model}...`
     let chatGptResponse = await queryChatGPT(query, userToken.id, dialogName, model, systemMessageContent, newTokenLimit, singleMessage, token);
+
+    if(!chatGptResponse.success && chatGptResponse.model == 'gpt-4o-plus'){
+      logs += `\n Ошибка`
+      logs += `\n Пробую модель "gpt-4o_guo"...`
+      chatGptResponse = await queryChatGPT(query, userToken.id, dialogName, 'gpt-4o_guo', systemMessageContent, newTokenLimit, singleMessage, token);
+    }
+    if(!chatGptResponse.success && chatGptResponse.model == 'gpt-4o-mini'){
+      logs += `\n Ошибка`
+      logs += `\n Пробую модель "gpt-4o_guogpt-4o-mini_guo"...`
+      chatGptResponse = await queryChatGPT(query, userToken.id, dialogName, 'gpt-4o-mini_guo', systemMessageContent, newTokenLimit, singleMessage, token);
+    }
     if (!chatGptResponse.success) {
       logs += `\n Ошибка`
-      logs += `\n Пробую модель "gpt-3.5-turbo"...`
-      chatGptResponse = await queryChatGPT(query, userToken.id, dialogName, 'gpt-3.5-turbo', systemMessageContent, newTokenLimit, singleMessage, token);
+      logs += `\n Пробую модель "gpt-3.5-turbo-0125_guo"...`
+      chatGptResponse = await queryChatGPT(query, userToken.id, dialogName, 'gpt-3.5-turbo-0125_guo', systemMessageContent, newTokenLimit, singleMessage, token);
       if (!chatGptResponse.success) {
         logs += `\n Ошибка`
         logs += `\n Пробую модель "nvidia/Nemotron-4-340B-Instruct"...`
