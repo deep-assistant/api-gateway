@@ -1,36 +1,112 @@
-
 import axios from 'axios';
-import { syncContextData, updateTokensData, makeDeepClient, requestBody, deleteFirstMessage, selectTokensData } from '../utils/dbManager.js';
+import path from 'path';
+import fs from 'fs/promises';
+import { fileURLToPath } from 'url';
+import { saveData, addNewMessage, addNewDialogs, loadData, requestBody, deleteFirstMessage } from '../utils/dbManager.js';
+import OpenAI from "openai";
 
-const spaceIdArgument = process.env.SPACE_ID_ARGUMENT;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const tokensFilePath = path.join(__dirname, '..', 'db', 'tokens.json');
+const dialogsFilePath = path.join(__dirname, '..', 'db', 'dialogs.json');
+const userTokensFilePath = path.join(__dirname, '..', 'db', 'user_tokens.json');
 
 let role = "";
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+});
+
+
+const openai_deepinfra = new OpenAI({
+  apiKey: process.env.FREE_OPENAI_KEY,
+  baseURL: "https://api.deepinfra.com/v1/openai",
+});
+const stream = false; // or true
+
+
+
 // Конфигурация для моделей
 const deploymentConfig = {
-  'gpt-4o': {
-      modelName: 'gpt-4o',
-      endpoint: 'https://deep-ai-west-us-3.openai.azure.com',
-      apiKey: process.env.AZURE_OPENAI_KEY,
-      apiVersion: '2023-03-15-preview'
+  'gpt-4o-plus': {
+      modelName: 'gpt-4o-plus',
+      endpoint: openai,
+      convertationEnergy: 1
   },
-  'gpt-35-turbo-16k': {
-      modelName: 'gpt-35-turbo-16k',
-      endpoint: 'https://deep-ai.openai.azure.com',
-      apiKey: process.env.AZURE_OPENAI_KEY_TURBO,
-      apiVersion: '2023-03-15-preview'
+  'gpt-4o-mini': {
+      modelName: 'gpt-4o-mini',
+      endpoint: openai,
+      convertationEnergy: 10
+  },
+  'gpt-auto': {
+      modelName: 'gpt-auto',
+      endpoint: openai,
+      convertationEnergy: 15
+  },
+  'nvidia/Nemotron-4-340B-Instruct': {
+      modelName: 'nvidia/Nemotron-4-340B-Instruct',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 1.2
+  },
+  'meta-llama/Meta-Llama-3-70B-Instruct': {
+      modelName: 'meta-llama/Meta-Llama-3-70B-Instruct',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 3.5
+  },
+  'deepinfra/deepinfra2-72B-Instruct': {
+      modelName: 'deepinfra/deepinfra2-72B-Instruct',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 3.5
+  },
+  'codellama/CodeLlama-70b-Instruct-hf': {
+      modelName: 'codellama/CodeLlama-70b-Instruct-hf',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 3.5
+  },
+  'microsoft/WizardLM-2-8x22B': {
+      modelName: 'microsoft/WizardLM-2-8x22B',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 3.5
+  },
+  'gpt-3.5-turbo': {
+      modelName: 'gpt-3.5-turbo',
+      endpoint: openai,
+      convertationEnergy: 15
+  },
+  'meta-llama/Meta-Llama-3-8B-Instruct': {
+      modelName: 'meta-llama/Meta-Llama-3-8B-Instruct',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 50
+  },
+  'microsoft/WizardLM-2-7B': {
+      modelName: 'microsoft/WizardLM-2-7B',
+      endpoint: openai_deepinfra,
+      convertationEnergy: 50
   }
 };
 
-async function queryChatGPT(userQuery, token, dialogName, model = 'gpt-4o', systemMessageContent = '', tokenLimit = Infinity, singleMessage = true, userNameToken, token_GQL) {
-  const deep = makeDeepClient(token_GQL);
-  const config = deploymentConfig[model] || deploymentConfig['gpt-4o']; // Если модель не найдена, используем gpt-4o
+async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-plus', systemMessageContent = '', tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
+  const config = deploymentConfig[model]; 
+  
   if (!config) {
     console.error(`Deployment config for ${model} not found`);
     return;
   }
 
-  const validLimitToken = await selectTokensData(deep, userNameToken);
+  const validLimitToken = await loadData(tokensFilePath);
+  const validLimitTokenUser = await loadData(userTokensFilePath);
+  const tokenBounded = validLimitToken.tokens.find(t => t.id === tokenAdmin);
+  const tokenBoundedUser = validLimitTokenUser.tokens.find(t => t.id === userToken);
+  if (tokenBounded.tokens_gpt <= 0) {
+    console.log('Превышен лимит использования токенов Админа');
+    throw new Error('Превышен лимит использования токенов Админа.');
+  }
+  if (tokenBoundedUser.tokens_gpt <= 0) {
+    console.log('Превышен лимит использования токенов Юзера');
+    throw new Error('Превышен лимит использования токенов.');
+  }
 
   if (!dialogName) {
     singleMessage = true;
@@ -39,48 +115,46 @@ async function queryChatGPT(userQuery, token, dialogName, model = 'gpt-4o', syst
   const systemMessage = { role: 'system', content: systemMessageContent || 'You are chatting with an AI assistant.' };
   role = "user";
   const userMessage = { role: 'user', content: userQuery };
-  const messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await syncContextData(dialogName, userMessage.content, role, systemMessage.content, spaceIdArgument, deep);
-
+  let messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
+  if(messageAllContextUser==undefined){
+    messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
+  }  
   try {
-    const endpointAll = `${config.endpoint}/openai/deployments/${config.modelName}/chat/completions?api-version=${config.apiVersion}`;
-  
-    console.log('Making request to endpoint:', endpointAll);  
-
-    const response = await axios.post(endpointAll, {
+    const endpoint = config.endpoint;
+    const response = await endpoint.chat.completions.create({
       messages: messageAllContextUser,
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': config.apiKey
-      }
+      model: config.modelName,
+      stream: stream,
     });
-    const gptReply = response.data.choices[0].message.content.trim();
-    const requestTokensUsed = response.data.usage.prompt_tokens;
-    const responseTokensUsed = response.data.usage.completion_tokens;
-    const token_user = validLimitToken[0] - requestTokensUsed;
-    const token_gpt = validLimitToken[1] - responseTokensUsed;
+    const gptReply = response.choices[0].message.content.trim();
+    const requestTokensUsed = response.usage.prompt_tokens;
+    const responseTokensUsed = response.usage.completion_tokens;
 
-    await updateTokensData(deep, userNameToken, token_user, token_gpt);
+    let energyCoeff = config.convertationEnergy;
+    const allTokenSent = Math.round((requestTokensUsed+responseTokensUsed)/energyCoeff)
+    tokenBounded.tokens_gpt = tokenBounded.tokens_gpt - allTokenSent;
+    tokenBoundedUser.tokens_gpt = tokenBoundedUser.tokens_gpt - allTokenSent;
+    await saveData(tokensFilePath, validLimitToken);
+    await saveData(userTokensFilePath, validLimitTokenUser);
 
     if (!singleMessage) {
-      // Логика обработки переполнения токенов
       const totalTokensUsed = requestTokensUsed + responseTokensUsed;
       if (totalTokensUsed > tokenLimit) {
-        await deleteFirstMessage(deep, dialogName, spaceIdArgument, 1);
+        await deleteFirstMessage(dialogName);
       }
       role = "assistant";
-      await syncContextData(dialogName, gptReply, role, systemMessage.content, spaceIdArgument, deep);
+      await addNewMessage(dialogName, gptReply, role, systemMessage.content);
     }
 
 
     return {
       success: true,
       response: gptReply,
+      allTokenSent,
       requestTokensUsed,
       responseTokensUsed,
-      token_user,
-      token_gpt,
-      history: await requestBody(deep, dialogName) // Получаем историю диалога
+      history: await requestBody(dialogName),
+      model
     };
   } catch (error) {
     console.error('Ошибка при запросе к ChatGPT:', error);
