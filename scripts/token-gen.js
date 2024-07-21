@@ -1,56 +1,48 @@
-import { saveTokensData, loadData } from '../src/utils/dbManager.js';
+import { generateAdminToken, generateUserToken } from '../src/utils/dbManager.js';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import crypto from 'crypto';
-import path from 'path';
 
-const tokensFilePath = path.join(path.dirname(''), 'src', 'db', 'tokens.json');
 
-// Получаем параметры из командной строки
 const argv = yargs(hideBin(process.argv))
-  .option('expires', {
-    alias: 'e',
-    description: 'Дата истечения токена в формате ISO',
+  .option('type', {
+    alias: 't',
+    description: 'Тип токена (admin/user)',
     type: 'string',
+    choices: ['admin', 'user'],
     demandOption: true,
   })
-  .option('userTokenLimit', {
+  .option('userName', {
+    alias: 'u',
+    description: 'Имя пользователя (только для user)',
+    type: 'string',
+  })
+  .option('token', {
     alias: 'ut',
-    description: 'Лимит токенов для пользователя',
-    type: 'number',
-    demandOption: true,
-  })
-  .option('chatGptTokenLimit', {
-    alias: 'ct',
-    description: 'Лимит токенов для ChatGPT',
-    type: 'number',
-    demandOption: true,
+    description: 'Количество токенов',
+    type: 'number'
   })
   .help()
   .alias('help', 'h')
   .argv;
 
-const run = async () => {
-  try {
-    const tokensData = await loadData(tokensFilePath);
-    const newToken = {
-      token: crypto.randomBytes(16).toString('hex'),
-      expires: argv.expires,
-      limits: {
-        user: argv.userTokenLimit,
-        chatGpt: argv.chatGptTokenLimit,
-      },
-      used: {
-        user: 0,
-        chatGpt: 0,
-      },
-    };
-    tokensData.tokens.push(newToken);
-    await saveTokensData(tokensData);
-    console.log(`Новый токен сгенерирован успешно: ${newToken.token}`);
-  } catch (error) {
-    console.error('Ошибка при генерации токена:', error);
-  }
-};
+
+  const run = async () => {
+    try {
+      if (argv.type === 'admin') {
+        const expires = argv.expires || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
+        const newAdminToken = await generateAdminToken(argv.token);
+        console.log(`Новый административный токен создан успешно: ${newAdminToken.token}`);
+      } else if (argv.type === 'user') {
+        if (!argv.userName) {
+          throw new Error('Имя пользователя обязательно для токена типа user');
+        }
+        const newUserToken = await generateUserToken(argv.userName, argv.userTokenLimit, argv.chatGptTokenLimit);
+        console.log(`Новый пользовательский токен создан успешно: ${newUserToken.token}`);
+      }
+    } catch (error) {
+      console.error('Ошибка при генерации токена:', error);
+    }
+  };
+  
 
 run();
