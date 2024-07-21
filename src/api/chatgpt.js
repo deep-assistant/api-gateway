@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 const tokensFilePath = path.join(__dirname, '..', 'db', 'tokens.json');
 const dialogsFilePath = path.join(__dirname, '..', 'db', 'dialogs.json');
 const userTokensFilePath = path.join(__dirname, '..', 'db', 'user_tokens.json');
+const systemMessagesFilePath = path.join(__dirname, '..', 'db', 'system_messages.json');
 
 let role = "";
 
@@ -28,22 +29,11 @@ const stream = false; // or true
 
 
 
-// Конфигурация для моделей
 const deploymentConfig = {
   'gpt-4o-plus': {
       modelName: 'gpt-4o-plus',
       endpoint: openai,
       convertationEnergy: 1
-  },
-  'gpt-4o-mini': {
-      modelName: 'gpt-4o-mini',
-      endpoint: openai,
-      convertationEnergy: 10
-  },
-  'gpt-auto': {
-      modelName: 'gpt-auto',
-      endpoint: openai,
-      convertationEnergy: 15
   },
   'nvidia/Nemotron-4-340B-Instruct': {
       modelName: 'nvidia/Nemotron-4-340B-Instruct',
@@ -87,7 +77,9 @@ const deploymentConfig = {
   }
 };
 
-async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-plus', systemMessageContent = '', tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
+
+
+async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-plus', systemMessageName, tokenLimit = Infinity, singleMessage = false, tokenAdmin) {
   const config = deploymentConfig[model]; 
   
   if (!config) {
@@ -112,13 +104,24 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
     singleMessage = true;
   }
 
-  const systemMessage = { role: 'system', content: systemMessageContent || 'You are chatting with an AI assistant.' };
+  const systemMessagesData = await loadData(systemMessagesFilePath);
+
+  let userSystemMessages = systemMessagesData?.defaultSystemMessage.find(item => item.name_model === systemMessageName); 
+  if (userSystemMessages == undefined) {
+    userSystemMessages = systemMessagesData?.users.find(user => user.userID === userToken)?.messages.find(message => message.name_model === systemMessageName);
+  }
+  userSystemMessages = userSystemMessages ? userSystemMessages.content : 'You are chatting with an AI assistant.';
+
+  const systemMessage = { role: 'system', content: userSystemMessages };
   role = "user";
   const userMessage = { role: 'user', content: userQuery };
   let messageAllContextUser = singleMessage ? [systemMessage, userMessage] : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
-  if(messageAllContextUser==undefined){
-    messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
-  }  
+
+  
+  if (messageAllContextUser === undefined) {
+    messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, userSystemMessages);
+  }
+
   try {
     const endpoint = config.endpoint;
     const response = await endpoint.chat.completions.create({
@@ -137,15 +140,15 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
     await saveData(tokensFilePath, validLimitToken);
     await saveData(userTokensFilePath, validLimitTokenUser);
 
+
     if (!singleMessage) {
       const totalTokensUsed = requestTokensUsed + responseTokensUsed;
       if (totalTokensUsed > tokenLimit) {
         await deleteFirstMessage(dialogName);
       }
       role = "assistant";
-      await addNewMessage(dialogName, gptReply, role, systemMessage.content);
+      await addNewMessage(dialogName, gptReply, role, userSystemMessages);
     }
-
 
     return {
       success: true,
@@ -153,8 +156,7 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
       allTokenSent,
       requestTokensUsed,
       responseTokensUsed,
-      history: await requestBody(dialogName),
-      model
+      history: await requestBody(dialogName)
     };
   } catch (error) {
     console.error('Ошибка при запросе к ChatGPT:', error);
@@ -164,5 +166,7 @@ async function queryChatGPT(userQuery, userToken, dialogName, model = 'gpt-4o-pl
     };
   }
 }
+
+
 
 export { queryChatGPT };
