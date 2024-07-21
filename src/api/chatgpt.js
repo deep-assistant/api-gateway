@@ -15,18 +15,25 @@ const userTokensFilePath = path.join(__dirname, '..', 'db', 'user_tokens.json');
 let role = "";
 
 const openai = new OpenAI({
+  timeout: 50 * 1000,
   apiKey: process.env.OPENAI_API_KEY,
   baseURL: process.env.OPENAI_BASE_URL,
 });
 
 
 const openai_deepinfra = new OpenAI({
+  timeout: 50 * 1000,
   apiKey: process.env.FREE_OPENAI_KEY,
   baseURL: "https://api.deepinfra.com/v1/openai",
 });
 const stream = false; // or true
 
 
+const openai_aiguoguo = new OpenAI({
+  timeout: 50 * 1000,
+  apiKey: process.env.AIGUOGUO_API_KEY,
+  baseURL: process.env.AIGUOGUO_BASE_URL,
+});
 
 // Конфигурация для моделей
 const deploymentConfig = {
@@ -38,7 +45,7 @@ const deploymentConfig = {
   'gpt-4o-mini': {
       modelName: 'gpt-4o-mini',
       endpoint: openai,
-      convertationEnergy: 10
+      convertationEnergy: 15
   },
   'gpt-auto': {
       modelName: 'gpt-auto',
@@ -84,6 +91,21 @@ const deploymentConfig = {
       modelName: 'microsoft/WizardLM-2-7B',
       endpoint: openai_deepinfra,
       convertationEnergy: 50
+  },
+  'gpt-4o-mini_guo': {
+      modelName: 'gpt-4o-mini',
+      endpoint: openai_aiguoguo,
+      convertationEnergy: 15
+  },
+  'gpt-4o_guo': {
+      modelName: 'gpt-4o',
+      endpoint: openai_aiguoguo,
+      convertationEnergy: 1
+  },
+  'gpt-3.5-turbo-0125_guo': {
+      modelName: 'gpt-3.5-turbo-0125',
+      endpoint: openai_aiguoguo,
+      convertationEnergy: 15
   }
 };
 
