@@ -1,15 +1,15 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import crypto from 'crypto';
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+import crypto from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Исправленные пути к JSON файлам
-const tokensFilePath = path.join(__dirname, '..', 'db', 'tokens.json');
-const dialogsFilePath = path.join(__dirname, '..', 'db', 'dialogs.json');
-const userTokensFilePath = path.join(__dirname, '..', 'db', 'user_tokens.json');
+const tokensFilePath = path.join(__dirname, "..", "db", "tokens.json");
+const dialogsFilePath = path.join(__dirname, "..", "db", "dialogs.json");
+const userTokensFilePath = path.join(__dirname, "..", "db", "user_tokens.json");
 
 // Инициализация JSON-файлов, если они отсутствуют
 async function initializeFiles() {
@@ -28,19 +28,19 @@ async function initializeFiles() {
 async function saveData(filePath, data) {
   try {
     const jsonData = JSON.stringify(data, null, 2);
-    await fs.writeFile(filePath, jsonData, { encoding: 'utf8' });
+    await fs.writeFile(filePath, jsonData, { encoding: "utf8" });
   } catch (error) {
-    console.error('Ошибка при сохранении данных:', error);
+    console.error("Ошибка при сохранении данных:", error);
   }
 }
 
 // Загрузка данных из хранилища
 async function loadData(filePath) {
   try {
-    const data = await fs.readFile(filePath, { encoding: 'utf8' });
+    const data = await fs.readFile(filePath, { encoding: "utf8" });
     return JSON.parse(data);
   } catch (error) {
-    console.error('Ошибка при загрузке данных:', error);
+    console.error("Ошибка при загрузке данных:", error);
     return null;
   }
 }
@@ -49,14 +49,14 @@ async function loadData(filePath) {
 async function generateUserToken(userName) {
   const tokensData = await loadData(userTokensFilePath);
   if (!tokensData) {
-    console.error('Ошибка при загрузке токенов пользователей.');
+    console.error("Ошибка при загрузке токенов пользователей.");
     return null;
   }
-  const userToken = tokensData.tokens.find(token => token.id === userName);
+  const userToken = tokensData.tokens.find((token) => token.id === userName);
   if (!userToken) {
     const newToken = {
       id: userName,
-      'tokens_gpt': 1500
+      tokens_gpt: 1500,
     };
     tokensData.tokens.push(newToken);
     await saveData(userTokensFilePath, tokensData);
@@ -66,17 +66,17 @@ async function generateUserToken(userName) {
   return userToken;
 }
 
-
-async function generateAdminToken(token=15000) {
+async function generateAdminToken(token = 15000, user_id) {
   const tokensData = await loadData(tokensFilePath);
   if (!tokensData) {
-    console.error('Ошибка при загрузке токенов админа.');
+    console.error("Ошибка при загрузке токенов админа.");
     return null;
   }
-  
+
   const newToken = {
-    id: crypto.randomBytes(16).toString('hex'),
-    'tokens_gpt': token
+    id: crypto.randomBytes(16).toString("hex"),
+    user_id: user_id,
+    tokens_gpt: token,
   };
   tokensData.tokens.push(newToken);
   await saveData(tokensFilePath, tokensData);
@@ -86,16 +86,16 @@ async function generateAdminToken(token=15000) {
 // Проверка, является ли предоставленный токен валидным пользовательским токеном
 async function isValidUserToken(userName) {
   const tokensData = await loadData(userTokensFilePath);
-  return tokensData?.tokens.some(tokenEntry => tokenEntry.id === userName);
+  return tokensData?.tokens.some((tokenEntry) => tokenEntry.id === userName);
 }
 
 // Функция синхронизации контекста данных
 async function addNewMessage(dialogName, messageContent, senderRole) {
   const dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) dialogsData = { dialogs: [] };
-  let dialog = dialogsData.dialogs.find(d => d.name === dialogName);
+  let dialog = dialogsData.dialogs.find((d) => d.name === dialogName);
   if (!dialog) {
-    return undefined
+    return undefined;
   }
   const newMessage = { role: senderRole, content: messageContent };
   dialog.messages.push(newMessage);
@@ -103,29 +103,28 @@ async function addNewMessage(dialogName, messageContent, senderRole) {
   return dialog.messages;
 }
 
-async function addNewDialogs(dialogName, messageContent, senderRole, systemMessageContent = '') {
+async function addNewDialogs(dialogName, messageContent, senderRole, systemMessageContent = "") {
   const dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) dialogsData = { dialogs: [] };
   let dialog = {
     name: dialogName,
-    messages: [{ role: 'system', content: systemMessageContent }]
+    messages: [{ role: "system", content: systemMessageContent }],
   };
   dialogsData.dialogs.push(dialog);
-  
+
   const newMessage = { role: senderRole, content: messageContent };
-  console.log(newMessage, '3333')
+  console.log(newMessage, "3333");
   dialog.messages.push(newMessage);
   await saveData(dialogsFilePath, dialogsData);
   return dialog.messages;
 }
 
-
 // Функция удаления первого сообщения в диалоге
 async function deleteFirstMessage(dialogName) {
   const dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) return;
-  
-  let dialog = dialogsData.dialogs.find(d => d.name === dialogName);
+
+  let dialog = dialogsData.dialogs.find((d) => d.name === dialogName);
   if (dialog && dialog.messages.length > 1) {
     dialog.messages.splice(1, 1);
     await saveData(dialogsFilePath, dialogsData);
@@ -136,8 +135,8 @@ async function deleteFirstMessage(dialogName) {
 async function requestBody(dialogName) {
   const dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) return { messages: [] };
-  
-  const dialog = dialogsData.dialogs.find(d => d.name === dialogName);
+
+  const dialog = dialogsData.dialogs.find((d) => d.name === dialogName);
   if (dialog) {
     return { messages: dialog.messages };
   } else {
@@ -150,8 +149,8 @@ async function requestBody(dialogName) {
 async function clearDialog(dialogName) {
   const dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) return false;
-  
-  const dialogIndex = dialogsData.dialogs.findIndex(d => d.name === dialogName);
+
+  const dialogIndex = dialogsData.dialogs.findIndex((d) => d.name === dialogName);
   if (dialogIndex !== -1) {
     dialogsData.dialogs.splice(dialogIndex, 1);
     await saveData(dialogsFilePath, dialogsData);
@@ -166,10 +165,8 @@ async function clearDialog(dialogName) {
 // Проверка, является ли предоставленный токен валидным администраторским токеном
 async function isValidAdminToken(providedToken) {
   const tokensData = await loadData(tokensFilePath);
-  return tokensData?.tokens.some(tokenEntry => tokenEntry.id === providedToken);
+  return tokensData?.tokens.some((tokenEntry) => tokenEntry.id === providedToken);
 }
-
-
 
 export {
   initializeFiles,
@@ -182,6 +179,6 @@ export {
   deleteFirstMessage,
   clearDialog,
   isValidAdminToken,
-  isValidUserToken, 
-  addNewDialogs
+  isValidUserToken,
+  addNewDialogs,
 };
