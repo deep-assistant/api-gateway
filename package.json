@@ -6,7 +6,8 @@
     "main": "src/server.js",
     "scripts": {
         "start": "node src/server.js",
-        "generate-token": "node scripts/token-gen.js"
+        "generate-token": "node scripts/token-gen.js",
+        "format": "prettier --write --list-different \"src/**/*.{ts,tsx,js,cjs,json,yml}\""
     },
     "dependencies": {
         "axios": "^0.27.2",
@@ -17,5 +18,8 @@
         "yargs": "^17.5.1"
     },
     "author": "TimaxLacs",
-    "license": "ISC"
+    "license": "ISC",
+    "devDependencies": {
+        "prettier": "^3.3.3"
+    }
 }
