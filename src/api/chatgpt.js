@@ -9,6 +9,7 @@ import {
   saveData,
 } from "../utils/dbManager.js";
 import { llmsConfig } from "../utils/llmsConfig.js";
+import {tokensService} from "../services/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +82,7 @@ async function queryChatGPT(
     tokenBoundedUser.tokens_gpt = tokenBoundedUser.tokens_gpt - allTokenSent;
     await saveData(tokensFilePath, validLimitToken);
     await saveData(userTokensFilePath, validLimitTokenUser);
+    await tokensService.updateAdminTokenByUserId(tokenBoundedUser.id)
 
     if (!singleMessage) {
       const totalTokensUsed = requestTokensUsed + responseTokensUsed;
