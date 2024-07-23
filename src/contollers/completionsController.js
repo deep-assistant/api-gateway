@@ -22,7 +22,7 @@ completionsController.post(
     if (!stream) {
       const completion = await completionsService.completions(body);
       const tokens = completion.usage.total_tokens;
-      await completionsService.updateCompletionTokens({ model, tokenId, tokens });
+      await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
 
       return new HttpResponse(200, completion);
     }
@@ -39,6 +39,7 @@ completionsController.post(
         await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
       }
 
+      res.write(SSEResponse.sendSSEEvent("[DONE]"));
       res.end();
     });
   }),
