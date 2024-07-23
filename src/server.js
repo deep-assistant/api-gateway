@@ -22,6 +22,7 @@ import { pipeline } from "stream";
 import { promisify } from "util";
 import completionsController from "./contollers/completionsController.js";
 import tokensController from "./contollers/tokensController.js";
+import {tokensService} from "./services/index.js";
 
 const asyncPipeline = promisify(pipeline);
 
@@ -362,7 +363,9 @@ app.post("/update-token", async (req, res) => {
         userTokenEntry.tokens_gpt -= addTokenNum;
         logs += `\n Токен пользователя ${userToken} уменьшен на ${addTokenNum}`;
       }
+
       await saveData(filePath, tokensData);
+      await tokensService.updateAdminTokenByUserId(userTokenEntry.id)
       res.send({
         success: true,
         message: `Токен пользователя ${userToken} успешно обновлен`,
