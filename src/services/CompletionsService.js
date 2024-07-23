@@ -9,12 +9,15 @@ export class CompletionsService {
     const adminToken = await this.tokensService.getAdminTokenById(tokenId);
     if (!adminToken) return;
 
-    await this.tokensService.updateAdminToken(tokenId, energy);
+    const user_token_id = adminToken.user_id;
+    if (!user_token_id) return;
 
-    const user_token = adminToken.user_id;
+    await this.tokensService.updateUserToken(user_token_id, energy);
+
+    const user_token = await this.tokensService.getUserToken(adminToken.user_id)
     if (!user_token) return;
 
-    await this.tokensService.updateUserToken(user_token, energy);
+    await this.tokensService.updateAdminTokenByUserId(user_token.id);
   }
 
   async updateCompletionTokensByModel({ model, tokenId, tokens }) {
