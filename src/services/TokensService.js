@@ -3,6 +3,7 @@ import path from "path";
 
 import { generateAdminToken, generateUserToken, loadData, saveData } from "../utils/dbManager.js";
 import { HttpException } from "../rest/HttpException.js";
+import crypto from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +51,22 @@ export class TokensService {
     return adminToken;
   }
 
+  async regenerateAdminTokenByUserId(userId) {
+    const userToken = await this.getUserToken(userId);
+    const tokensData = await this.getTokensData(tokensFilePath);
+    const adminToken = tokensData.tokens.find((token) => token.user_id === userToken.id);
+
+    if (!adminToken) return await generateAdminToken(userToken.tokens_gpt, userId);
+
+    await this.updateAdminTokenHash(
+        adminToken.id,
+        userToken.tokens_gpt,
+        crypto.randomBytes(16).toString("hex")
+    );
+
+    return (await this.getTokensData(tokensFilePath)).tokens.find((token) => token.user_id === userToken.id);
+  }
+
   async getAdminTokenById(tokenId) {
     return this.getTokenById(tokenId, await this.getTokensData(tokensFilePath));
   }
@@ -78,6 +95,15 @@ export class TokensService {
     const tokens = tokensData.tokens.map((token) =>
       token.id === tokenId ? { ...token, tokens_gpt: token.tokens_gpt - energy } : token,
     );
+    await saveData(tokensFilePath, { tokens });
+  }
+
+  async updateAdminTokenHash(tokenId, energy, hash) {
+    const tokensData = await loadData(tokensFilePath);
+    const tokens = tokensData.tokens.map((token) =>
+        token.id === tokenId ? { ...token, id: hash } : token,
+    );
+
     await saveData(tokensFilePath, { tokens });
   }
 
