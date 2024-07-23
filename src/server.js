@@ -239,6 +239,7 @@ app.get("/tokens", async (req, res) => {
         tokens: tokenEntry.tokens_gpt,
         logs: logs,
       });
+
     } else {
       logs += `\n Пользователь с токеном ${tokenName} не найден`;
       res.status(404).send({
