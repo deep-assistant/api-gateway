@@ -227,9 +227,9 @@ app.get("/tokens", async (req, res) => {
       res.status(400).send({ success: false, message: "Неверный тип пользователя" });
       return;
     }
-    logs += `\n Поиск токена пользователя: ${admin_token || tokenName}`;
+    logs += `\n Поиск токена пользователя: ${tokenName}`;
     const tokensData = await loadData(filePath);
-    const tokenEntry = tokensData.tokens.find((t) => t.id === admin_token || tokenName);
+    const tokenEntry = tokensData.tokens.find((t) => t.id === tokenName);
 
     if (tokenEntry) {
       logs += `\n Токен пользователя найден: ${tokenEntry.id}`;
@@ -239,6 +239,7 @@ app.get("/tokens", async (req, res) => {
         tokens: tokenEntry.tokens_gpt,
         logs: logs,
       });
+
     } else {
       logs += `\n Пользователь с токеном ${tokenName} не найден`;
       res.status(404).send({
