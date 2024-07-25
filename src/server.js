@@ -23,6 +23,7 @@ import { promisify } from "util";
 import completionsController from "./contollers/completionsController.js";
 import tokensController from "./contollers/tokensController.js";
 import {tokensService} from "./services/index.js";
+import systemMessagesController from "./contollers/systemMessagesController.js";
 
 const asyncPipeline = promisify(pipeline);
 
@@ -126,12 +127,12 @@ app.post("/chatgpt", async (req, res) => {
       );
       if (!chatGptResponse.success) {
         logs += `\n Ошибка`;
-        logs += `\n Пробую модель "nvidia/Nemotron-4-340B-Instruct"...`;
+        logs += `\n Пробую модель "meta-llama/Meta-Llama-3.1-405B"...`;
         chatGptResponse = await queryChatGPT(
           query,
           userToken.id,
           dialogName,
-          "nvidia/Nemotron-4-340B-Instruct",
+          "meta-llama/Meta-Llama-3.1-405B",
           systemMessageContent,
           newTokenLimit,
           singleMessage,
@@ -490,6 +491,7 @@ app.post("/text-to-speech", async (req, res) => {
 
 app.use("/", completionsController);
 app.use("/", tokensController);
+app.use("/", systemMessagesController)
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
