@@ -6,10 +6,10 @@ const openai = new OpenAI({
   baseURL: process.env.OPENAI_BASE_URL,
 });
 
-const openai_deepinfra = new OpenAI({
+const openai_opensource = new OpenAI({
   timeout: 50 * 1000,
   apiKey: process.env.FREE_OPENAI_KEY,
-  baseURL: "https://api.deepinfra.com/v1/openai",
+  baseURL: process.env.FREE_OPENAI_BASE_URL,
 });
 
 const openai_aiguoguo = new OpenAI({
@@ -39,45 +39,30 @@ export const llmsConfig = {
     endpoint: openai,
     convertationEnergy: 15,
   },
-  "nvidia/Nemotron-4-340B-Instruct": {
-    modelName: "nvidia/Nemotron-4-340B-Instruct",
-    endpoint: openai_deepinfra,
+  "meta-llama/Meta-Llama-3.1-405B": {
+    modelName: "accounts/fireworks/models/llama-v3p1-405b-instruct",
+    endpoint: openai_opensource,
     convertationEnergy: 1.2,
   },
-  "meta-llama/Meta-Llama-3-70B-Instruct": {
-    modelName: "meta-llama/Meta-Llama-3-70B-Instruct",
-    endpoint: openai_deepinfra,
+  "meta-llama/Meta-Llama-3.1-70B": {
+    modelName: "accounts/fireworks/models/llama-v3p1-70b-instruct",
+    endpoint: openai_opensource,
     convertationEnergy: 3.5,
   },
-  "deepinfra/deepinfra2-72B-Instruct": {
-    modelName: "deepinfra/deepinfra2-72B-Instruct",
-    endpoint: openai_deepinfra,
-    convertationEnergy: 3.5,
+  "meta-llama/Meta-Llama-3.1-8B": {
+    modelName: "accounts/fireworks/models/llama-v3p1-8b-instruct",
+    endpoint: openai_opensource,
+    convertationEnergy: 50,
   },
-  "codellama/CodeLlama-70b-Instruct-hf": {
-    modelName: "codellama/CodeLlama-70b-Instruct-hf",
-    endpoint: openai_deepinfra,
-    convertationEnergy: 3.5,
-  },
-  "microsoft/WizardLM-2-8x22B": {
-    modelName: "microsoft/WizardLM-2-8x22B",
-    endpoint: openai_deepinfra,
+  "meta-llama/Meta-Llama-3-70B": {
+    modelName: "accounts/fireworks/models/llama-v3-70b-instruct",
+    endpoint: openai_opensource,
     convertationEnergy: 3.5,
   },
   "gpt-3.5-turbo": {
     modelName: "gpt-3.5-turbo",
     endpoint: openai,
     convertationEnergy: 15,
-  },
-  "meta-llama/Meta-Llama-3-8B-Instruct": {
-    modelName: "meta-llama/Meta-Llama-3-8B-Instruct",
-    endpoint: openai_deepinfra,
-    convertationEnergy: 50,
-  },
-  "microsoft/WizardLM-2-7B": {
-    modelName: "microsoft/WizardLM-2-7B",
-    endpoint: openai_deepinfra,
-    convertationEnergy: 50,
   },
   "gpt-4o-mini_guo": {
     modelName: "gpt-4o-mini",
