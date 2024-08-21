@@ -13,6 +13,7 @@ completionsController.post(
   rest(async ({ req, res }) => {
     const tokenId = tokensService.getTokenFromAuthorization(req.headers.authorization);
     await tokensService.isAdminToken(tokenId);
+    await tokensService.isHasBalanceToken(tokenId)
 
     const body = { ...req.body, stream_options: { include_usage: true } };
 
