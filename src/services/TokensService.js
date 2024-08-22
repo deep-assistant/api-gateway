@@ -99,6 +99,15 @@ export class TokensService {
     }
   }
 
+  async isHasBalanceToken(tokenId) {
+    const tokensData = await this.getTokensData(tokensFilePath);
+    const token = tokensData.tokens.find((token) => token.id === tokenId);
+
+    if(token.tokens_gpt < 0) {
+      throw new HttpException(429, "Не хватает баланса!");
+    }
+  }
+
   getTokenFromAuthorization(authorization) {
     return authorization.split("Bearer ")[1];
   }
