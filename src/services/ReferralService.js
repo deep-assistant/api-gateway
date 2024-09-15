@@ -49,7 +49,7 @@ export class ReferralService {
                 await this.tokensService.updateUserToken(id, 5000, "add")
                 await this.tokensService.updateAdminTokenByUserId(id)
 
-                await this.tokensService.updateUserToken(parent, 15000,"add")
+                await this.tokensService.updateUserToken(parent, 5000, "add")
                 await this.tokensService.updateAdminTokenByUserId(parent)
             }
         }
@@ -83,7 +83,7 @@ export class ReferralService {
         const lastUpdate = new Date(foundReferral.lastUpdate);
 
         const nextLastDate = new Date(lastUpdate);
-        nextLastDate.setDate(lastUpdate.getDay() + 1);
+        nextLastDate.setDate(lastUpdate.getDate() + 1);
 
         const currentDate = new Date();
 
@@ -98,8 +98,8 @@ export class ReferralService {
                 foundInitialReferral.isActivated = true
 
                 await this.updateParent(referralsData, foundReferral.parent)
+                await this.updateTokens(foundReferral.parent, 10000, "add")
 
-                console.log(referralsData)
                 await saveData(referralsPath, referralsData);
 
                 return {isAward, updateParents: foundReferral.parent ? [foundReferral.parent] : []}
