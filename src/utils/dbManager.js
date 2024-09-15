@@ -56,7 +56,7 @@ async function generateUserToken(userName) {
   if (!userToken) {
     const newToken = {
       id: userName,
-      tokens_gpt: 1500,
+      tokens_gpt: 10000,
     };
     tokensData.tokens.push(newToken);
     await saveData(userTokensFilePath, tokensData);
@@ -91,7 +91,7 @@ async function isValidUserToken(userName) {
 
 // Функция синхронизации контекста данных
 async function addNewMessage(dialogName, messageContent, senderRole) {
-  const dialogsData = await loadData(dialogsFilePath);
+  let dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) dialogsData = { dialogs: [] };
   let dialog = dialogsData.dialogs.find((d) => d.name === dialogName);
   if (!dialog) {
@@ -104,7 +104,7 @@ async function addNewMessage(dialogName, messageContent, senderRole) {
 }
 
 async function addNewDialogs(dialogName, messageContent, senderRole, systemMessageContent = "") {
-  const dialogsData = await loadData(dialogsFilePath);
+  let dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) dialogsData = { dialogs: [] };
   let dialog = {
     name: dialogName,
