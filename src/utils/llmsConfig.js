@@ -40,24 +40,24 @@ export const llmsConfig = {
     convertationEnergy: 15,
   },
   "meta-llama/Meta-Llama-3.1-405B": {
-    modelName: "accounts/fireworks/models/llama-v3p1-405b-instruct",
+    modelName: "meta-llama/Meta-Llama-3.1-405B-Instruct",
     endpoint: openai_opensource,
-    convertationEnergy: 1.2,
+    convertationEnergy: 2,
   },
   "meta-llama/Meta-Llama-3.1-70B": {
-    modelName: "accounts/fireworks/models/llama-v3p1-70b-instruct",
+    modelName: "meta-llama/Meta-Llama-3.1-70B-Instruct",
     endpoint: openai_opensource,
-    convertationEnergy: 3.5,
+    convertationEnergy: 4,
   },
   "meta-llama/Meta-Llama-3.1-8B": {
-    modelName: "accounts/fireworks/models/llama-v3p1-8b-instruct",
+    modelName: "meta-llama/Meta-Llama-3.1-8B-Instruct",
     endpoint: openai_opensource,
     convertationEnergy: 50,
   },
   "meta-llama/Meta-Llama-3-70B": {
     modelName: "accounts/fireworks/models/llama-v3-70b-instruct",
     endpoint: openai_opensource,
-    convertationEnergy: 3.5,
+    convertationEnergy: 4,
   },
   "gpt-3.5-turbo": {
     modelName: "gpt-3.5-turbo",
@@ -68,6 +68,16 @@ export const llmsConfig = {
     modelName: "gpt-4o-mini",
     endpoint: openai_aiguoguo,
     convertationEnergy: 15,
+  },
+  "o1-mini": {
+    modelName: "o1-mini",
+    endpoint: openai_aiguoguo,
+    convertationEnergy: 1.1,
+  },
+  "o1-preview": {
+    modelName: "o1-preview",
+    endpoint: openai_aiguoguo,
+    convertationEnergy: 0.2,
   },
   "gpt-4o_guo": {
     modelName: "gpt-4o",
