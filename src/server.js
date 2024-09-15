@@ -24,6 +24,7 @@ import completionsController from "./contollers/completionsController.js";
 import tokensController from "./contollers/tokensController.js";
 import {tokensService} from "./services/index.js";
 import systemMessagesController from "./contollers/systemMessagesController.js";
+import referralController from "./contollers/referralController.js";
 
 const asyncPipeline = promisify(pipeline);
 
@@ -84,70 +85,13 @@ app.post("/chatgpt", async (req, res) => {
       token,
     );
 
-    if (!chatGptResponse.success && chatGptResponse.model == "gpt-4o-plus") {
-      logs += `\n Ошибка`;
-      logs += `\n Пробую модель "gpt-4o_guo"...`;
-      chatGptResponse = await queryChatGPT(
-        query,
-        userToken.id,
-        dialogName,
-        "gpt-4o_guo",
-        systemMessageContent,
-        newTokenLimit,
-        singleMessage,
-        token,
-      );
-    }
-    if (!chatGptResponse.success && chatGptResponse.model == "gpt-4o-mini") {
-      logs += `\n Ошибка`;
-      logs += `\n Пробую модель "gpt-4o_guogpt-4o-mini_guo"...`;
-      chatGptResponse = await queryChatGPT(
-        query,
-        userToken.id,
-        dialogName,
-        "gpt-4o-mini_guo",
-        systemMessageContent,
-        newTokenLimit,
-        singleMessage,
-        token,
-      );
-    }
     if (!chatGptResponse.success) {
-      logs += `\n Ошибка`;
-      logs += `\n Пробую модель "gpt-3.5-turbo-0125_guo"...`;
-      chatGptResponse = await queryChatGPT(
-        query,
-        userToken.id,
-        dialogName,
-        "gpt-3.5-turbo-0125_guo",
-        systemMessageContent,
-        newTokenLimit,
-        singleMessage,
-        token,
-      );
-      if (!chatGptResponse.success) {
-        logs += `\n Ошибка`;
-        logs += `\n Пробую модель "meta-llama/Meta-Llama-3.1-405B"...`;
-        chatGptResponse = await queryChatGPT(
-          query,
-          userToken.id,
-          dialogName,
-          "meta-llama/Meta-Llama-3.1-405B",
-          systemMessageContent,
-          newTokenLimit,
-          singleMessage,
-          token,
-        );
-        if (!chatGptResponse.success) {
-          res.status(500).send({ success: false, message: chatGptResponse.error });
-          return;
-        }
-      }
+      res.status(500).send({ success: false, message: chatGptResponse.error });
+      return;
     }
-    logs += `\n Ответ получен ${chatGptResponse.response}`;
-    logs += `\n Потрачено токенов ${chatGptResponse.allTokenSent}`;
+
     res.send({
-      success: true,
+      success: chatGptResponse,
       response: chatGptResponse.response,
       token_spent: chatGptResponse.allTokenSent,
       logs: logs,
@@ -492,6 +436,7 @@ app.post("/text-to-speech", async (req, res) => {
 app.use("/", completionsController);
 app.use("/", tokensController);
 app.use("/", systemMessagesController)
+app.use("/", referralController)
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

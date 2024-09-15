@@ -130,10 +130,10 @@ export class TokensService {
     await saveData(tokensFilePath, { tokens });
   }
 
-  async updateUserToken(tokenId, energy) {
+  async updateUserToken(tokenId, energy, operation="subtract") {
     const tokensData = await loadData(userTokensFilePath);
     const tokens = tokensData.tokens.map((token) =>
-      token.id === tokenId ? { ...token, tokens_gpt: token.tokens_gpt - energy } : token,
+      token.id === tokenId ? { ...token, tokens_gpt: operation === "subtract" ? token.tokens_gpt - energy : token.tokens_gpt + energy } : token,
     );
 
     await saveData(userTokensFilePath, { tokens });

@@ -66,6 +66,7 @@ async function queryChatGPT(
     messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
   }
   try {
+    console.log(messageAllContextUser)
     const endpoint = config.endpoint;
     const response = await endpoint.chat.completions.create({
       messages: messageAllContextUser,
