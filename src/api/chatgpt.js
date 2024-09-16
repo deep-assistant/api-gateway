@@ -65,6 +65,11 @@ async function queryChatGPT(
   if (messageAllContextUser === undefined) {
     messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
   }
+
+  if (model.startsWith('o1')) {
+    messageAllContextUser = messageAllContextUser.filter(({role}) => role !== "system")
+  }
+
   try {
     console.log(messageAllContextUser)
     const endpoint = config.endpoint;
