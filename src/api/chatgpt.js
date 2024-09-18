@@ -71,7 +71,6 @@ async function queryChatGPT(
   }
 
   try {
-    console.log(messageAllContextUser)
     const endpoint = config.endpoint;
     const response = await endpoint.chat.completions.create({
       messages: messageAllContextUser,
