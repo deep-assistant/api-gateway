@@ -11,6 +11,8 @@ referralController.post(
     rest(async ({req}) => {
         await tokensService.isValidMasterToken(req.query.masterToken);
 
+        console.log("referralController",req.query)
+
         return new HttpResponse(201, await referralService.createReferral(req.query.userId, req.query.referralId || null));
     }),
 );
