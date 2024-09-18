@@ -32,12 +32,12 @@ export const llmsConfig = {
   "gpt-4o-mini": {
     modelName: "gpt-4o-mini",
     endpoint: openai,
-    convertationEnergy: 15,
+    convertationEnergy: 14,
   },
   "gpt-auto": {
     modelName: "gpt-auto",
     endpoint: openai,
-    convertationEnergy: 15,
+    convertationEnergy: 14,
   },
   "meta-llama/Meta-Llama-3.1-405B": {
     modelName: "meta-llama/Meta-Llama-3.1-405B-Instruct",
@@ -71,13 +71,13 @@ export const llmsConfig = {
   },
   "o1-mini": {
     modelName: "o1-mini",
-    endpoint: openai_aiguoguo,
-    convertationEnergy: 1.1,
+    endpoint: openai,
+    convertationEnergy: 1,
   },
   "o1-preview": {
     modelName: "o1-preview",
-    endpoint: openai_aiguoguo,
-    convertationEnergy: 0.2,
+    endpoint: openai,
+    convertationEnergy: 0.15,
   },
   "gpt-4o_guo": {
     modelName: "gpt-4o",
