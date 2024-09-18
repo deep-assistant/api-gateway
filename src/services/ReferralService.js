@@ -27,6 +27,7 @@ export class ReferralService {
         const referralsData = await this.getReferrals()
         const foundReferral = this.findReferralById(referralsData, id)
 
+        console.log({foundReferral})
         if (foundReferral) {
             throw new HttpException(400, "Реферал уже существует!")
         }
@@ -41,11 +42,15 @@ export class ReferralService {
             award: 10000
         }
 
+        console.log({referral})
+
         if (parent) {
             const foundParent = this.findReferralById(referralsData, parent)
+
+            console.log({foundParent})
             if (foundParent) {
                 foundParent.children.push(id)
-
+                console.log({foundParent})
                 await this.tokensService.updateUserToken(id, 5000, "add")
                 await this.tokensService.updateAdminTokenByUserId(id)
 
@@ -55,6 +60,7 @@ export class ReferralService {
         }
 
         referralsData.referrals.push(referral)
+        console.log({referral})
 
         await saveData(referralsPath, referralsData);
 
