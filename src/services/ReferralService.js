@@ -24,6 +24,7 @@ export class ReferralService {
     }
 
     async createReferral(id, parent = null) {
+        console.log("______createReferral________")
         const referralsData = await this.getReferrals()
         const foundReferral = this.findReferralById(referralsData, id)
 
@@ -83,6 +84,7 @@ export class ReferralService {
     }
 
     async getAward(id) {
+        console.log("______getAward________")
         const referralsData = await this.getReferrals()
         const foundReferral = await this.getReferral(id)
 
@@ -125,6 +127,7 @@ export class ReferralService {
         }
 
         const foundParentReferral = this.findReferralById(referralsData, parentId)
+        if (!foundParentReferral) return
 
         foundParentReferral.award += 500
     }
