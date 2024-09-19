@@ -79,6 +79,21 @@ export const llmsConfig = {
     endpoint: openai,
     convertationEnergy: 0.15,
   },
+  "claude-3": {
+    modelName: "claude-3-opus-20240229",
+    endpoint: openai,
+    convertationEnergy: 1,
+  },
+  "claude-3-5": {
+    modelName: "claude-3-5-sonnet-20240620",
+    endpoint: openai,
+    convertationEnergy: 0.15,
+  },
+  "uncensored": {
+    modelName: "uncensored-small-32k-20240717",
+    endpoint: openai,
+    convertationEnergy: 10,
+  },
   "gpt-4o_guo": {
     modelName: "gpt-4o",
     endpoint: openai_aiguoguo,
