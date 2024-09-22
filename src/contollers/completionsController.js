@@ -22,9 +22,6 @@ completionsController.post(
     console.log(`\n задается тело запроса`)
     const body = { ...req.body, stream_options: { include_usage: true } };
 
-    console.log(`\n тело запроса задано \n`)
-    console.log(body)
-
 
     const model = body.model;
     const stream = body.stream;
