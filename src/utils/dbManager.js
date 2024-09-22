@@ -113,7 +113,6 @@ async function addNewDialogs(dialogName, messageContent, senderRole, systemMessa
   dialogsData.dialogs.push(dialog);
 
   const newMessage = { role: senderRole, content: messageContent };
-  console.log(newMessage, "3333");
   dialog.messages.push(newMessage);
   await saveData(dialogsFilePath, dialogsData);
   return dialog.messages;
