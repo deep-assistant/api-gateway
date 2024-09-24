@@ -16,12 +16,12 @@ tokensController.get(
 );
 
 tokensController.post(
-    "/token/admin",
-    rest(async ({ req }) => {
-        await tokensService.isValidMasterToken(req.query.masterToken);
+  "/token/admin",
+  rest(async ({ req }) => {
+    await tokensService.isValidMasterToken(req.query.masterToken);
 
-        return new HttpResponse(200, await tokensService.regenerateAdminTokenByUserId(req.query.userId));
-    }),
+    return new HttpResponse(200, await tokensService.regenerateAdminTokenByUserId(req.query.userId));
+  }),
 );
 
 export default tokensController;

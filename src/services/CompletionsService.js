@@ -1,4 +1,5 @@
-import { llmsConfig } from "../utils/llmsConfig.js";
+import { llmsConfig, tryCompletionsConfig } from "../utils/llmsConfig.js";
+import { queryChatGPT } from "../api/chatgpt.js";
 
 export class CompletionsService {
   constructor(tokensService) {
@@ -14,7 +15,7 @@ export class CompletionsService {
 
     await this.tokensService.updateUserToken(user_token_id, energy);
 
-    const user_token = await this.tokensService.getUserToken(adminToken.user_id)
+    const user_token = await this.tokensService.getUserToken(adminToken.user_id);
     if (!user_token) return;
 
     await this.tokensService.updateAdminTokenByUserId(user_token.id);
@@ -42,5 +43,54 @@ export class CompletionsService {
 
   async completions(params) {
     return this.tryEndpoints(params, [params.model, `${params.model}_guo`, "gpt-auto"]);
+  }
+
+  async tryQueryCompletions(
+    userQuery,
+    userToken,
+    dialogName,
+    model,
+    systemMessageContent,
+    tokenLimit,
+    singleMessage,
+    tokenAdmin,
+  ) {
+    const modelsChain = tryCompletionsConfig[model];
+
+    if (!modelsChain) {
+      return await queryChatGPT(
+        userQuery,
+        userToken,
+        dialogName,
+        model,
+        systemMessageContent,
+        tokenLimit,
+        singleMessage,
+        tokenAdmin,
+      );
+    }
+
+    for (const modelsChainElement of modelsChain) {
+      console.log(modelsChainElement);
+      const response = await queryChatGPT(
+        userQuery,
+        userToken,
+        dialogName,
+        modelsChainElement,
+        systemMessageContent,
+        tokenLimit,
+        singleMessage,
+        tokenAdmin,
+      );
+
+      if (response.success) return response;
+    }
+
+    return {
+      success: false,
+      error: `Сеть Deep.GPT сейчас перегружен, попробуйте позже! 
+                      Или напишите к нам в чат, постараемся помочь! 😊
+                      https://t.me/+VMrsvzEcp2czOWJi`,
+    };
   }
 }
