@@ -1,6 +1,5 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { queryChatGPT } from "./api/chatgpt.js";
 import {
   addNewDialogs,
   addNewMessage,
@@ -22,7 +21,7 @@ import { pipeline } from "stream";
 import { promisify } from "util";
 import completionsController from "./contollers/completionsController.js";
 import tokensController from "./contollers/tokensController.js";
-import {tokensService} from "./services/index.js";
+import { completionsService, tokensService } from "./services/index.js";
 import systemMessagesController from "./contollers/systemMessagesController.js";
 import referralController from "./contollers/referralController.js";
 
@@ -74,7 +73,8 @@ app.post("/chatgpt", async (req, res) => {
   try {
     const newTokenLimit = tokenLimit + 999999999;
     logs += `\n Пробую модель ${model}...`;
-    let chatGptResponse = await queryChatGPT(
+
+    const chatGptResponse = await completionsService.tryQueryCompletions(
       query,
       userToken.id,
       dialogName,
@@ -184,7 +184,6 @@ app.get("/tokens", async (req, res) => {
         tokens: tokenEntry.tokens_gpt,
         logs: logs,
       });
-
     } else {
       logs += `\n Пользователь с токеном ${tokenName} не найден`;
       res.status(404).send({
@@ -311,7 +310,7 @@ app.post("/update-token", async (req, res) => {
       }
 
       await saveData(filePath, tokensData);
-      await tokensService.updateAdminTokenByUserId(userTokenEntry.id)
+      await tokensService.updateAdminTokenByUserId(userTokenEntry.id);
       res.send({
         success: true,
         message: `Токен пользователя ${userToken} успешно обновлен`,
@@ -435,8 +434,8 @@ app.post("/text-to-speech", async (req, res) => {
 
 app.use("/", completionsController);
 app.use("/", tokensController);
-app.use("/", systemMessagesController)
-app.use("/", referralController)
+app.use("/", systemMessagesController);
+app.use("/", referralController);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

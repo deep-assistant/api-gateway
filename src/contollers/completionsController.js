@@ -15,7 +15,7 @@ completionsController.post(
     console.log(`\n проверка токена`)
     const tokenId = tokensService.getTokenFromAuthorization(req.headers.authorization);
     await tokensService.isAdminToken(tokenId);
-    await tokensService.isHasBalanceToken(tokenId)
+    await tokensService.isHasBalanceToken(tokenId);
     console.log(`\n токен проверен \n`)
     console.log(tokenId)
 
