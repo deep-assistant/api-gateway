@@ -20,7 +20,7 @@ const openai_aiguoguo = new OpenAI({
 
 export const llmsConfig = {
   "gpt-4o": {
-    modelName: "gpt-4o-plus",
+    modelName: "gpt-4o",
     endpoint: openai,
     convertationEnergy: 1,
   },
@@ -89,7 +89,7 @@ export const llmsConfig = {
     endpoint: openai,
     convertationEnergy: 0.15,
   },
-  "uncensored": {
+  uncensored: {
     modelName: "uncensored-small-32k-20240717",
     endpoint: openai,
     convertationEnergy: 10,
@@ -109,4 +109,13 @@ export const llmsConfig = {
     endpoint: openai_aiguoguo,
     convertationEnergy: 15,
   },
+};
+
+export const tryCompletionsConfig = {
+  "o1-preview": ["o1-preview", "o1-mini", "gpt-4o-plus", "gpt-4o-mini", "gpt-auto", "gpt-3.5-turbo"],
+  "o1-mini": ["o1-mini", "gpt-4o-mini", "gpt-auto", "gpt-3.5-turbo"],
+  "gpt-4o-plus": ["gpt-4o-plus", "gpt-4o-mini", "gpt-auto", "gpt-3.5-turbo"],
+  "gpt-4o-mini": ["gpt-4o-mini", "gpt-auto", "gpt-3.5-turbo"],
+  "claude-3.5": ["claude-3.5", "claude-3", "gpt-4o-plus", "o1-mini", "gpt-4o-mini", "gpt-auto", "gpt-3.5-turbo"],
+  "claude-3": ["claude-3", "gpt-4o-plus", "o1-mini", "gpt-4o-mini", "gpt-auto", "gpt-3.5-turbo"],
 };

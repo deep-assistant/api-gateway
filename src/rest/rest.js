@@ -13,7 +13,7 @@ export function rest(fn) {
         response.write(res);
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
 
       if (error.status) {
         res.status(error.status).send({ message: error.message });
