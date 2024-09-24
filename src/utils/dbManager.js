@@ -89,19 +89,56 @@ async function isValidUserToken(userName) {
   return tokensData?.tokens.some((tokenEntry) => tokenEntry.id === userName);
 }
 
+
 // Функция синхронизации контекста данных
-async function addNewMessage(dialogName, messageContent, senderRole) {
+async function addNewMessage(dialogName, messageContent, senderRole, systemMessageContent) {
+
   let dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) dialogsData = { dialogs: [] };
   let dialog = dialogsData.dialogs.find((d) => d.name === dialogName);
   if (!dialog) {
     return undefined;
   }
-  const newMessage = { role: senderRole, content: messageContent };
-  dialog.messages.push(newMessage);
-  await saveData(dialogsFilePath, dialogsData);
+
+  // Проверяем, если системного сообщения еще нет, добавляем
+  
+  if(dialog.messages[dialog.messages.length -1].role != senderRole ||
+     dialog.messages[dialog.messages.length -1].content != messageContent){
+    // Проверяем, если системного сообщения еще нет, добавляем
+    const existingSystemMessageIndex = dialog.messages.findIndex(msg => msg.role === "system");
+
+    if (existingSystemMessageIndex !== -1) {
+      // Удаляем старое системное сообщение
+      dialog.messages.splice(existingSystemMessageIndex, 1);
+    }
+
+    // Добавляем системное сообщение перед последним
+    dialog.messages.splice(dialog.messages.length - 1, 0, { role: "system", content: systemMessageContent });
+
+    // Добавляем новое сообщение в конец истории
+    const newMessage = { role: senderRole, content: messageContent };
+    dialog.messages.push(newMessage);
+
+    await saveData(dialogsFilePath, dialogsData);
+  }
   return dialog.messages;
 }
+
+
+
+
+// async function addNewMessage(dialogName, messageContent, senderRole, systemMessageContent) {
+//   let dialogsData = await loadData(dialogsFilePath);
+//   if (!dialogsData) dialogsData = { dialogs: [] };
+//   let dialog = dialogsData.dialogs.find((d) => d.name === dialogName);
+//   if (!dialog) {
+//     return undefined;
+//   }
+//   const newMessage = { role: senderRole, content: messageContent };
+//   dialog.messages.push(newMessage);
+//   await saveData(dialogsFilePath, dialogsData);
+//   return dialog.messages;
+// }
 
 async function addNewDialogs(dialogName, messageContent, senderRole, systemMessageContent = "") {
   let dialogsData = await loadData(dialogsFilePath);

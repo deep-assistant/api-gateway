@@ -60,13 +60,29 @@ async function queryChatGPT(
   const systemMessage = { role: "system", content: systemMessageContent || "You are chatting with an AI assistant." };
   role = "user";
   const userMessage = { role: "user", content: userQuery };
-  let messageAllContextUser = singleMessage
-    ? [systemMessage, userMessage]
-    : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
-  if (messageAllContextUser === undefined) {
-    messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
-  }
+  // let messageAllContextUser = singleMessage
+  //   ? [systemMessage, userMessage]
+  //   : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content, systemMessageContent);
+  // if (messageAllContextUser === undefined) {
+  //   messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
+  // }
 
+  let messageAllContextUser;
+  if (singleMessage) {
+    messageAllContextUser = [systemMessage, userMessage];
+  } else {
+    messageAllContextUser = await addNewMessage(dialogName, userMessage.content, role, systemMessage.content);
+    if (messageAllContextUser === undefined) {
+      // Возможно, нужно создать новый диалог, если его нет
+      messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
+      // Проверяем, был ли диалог создан
+      if (messageAllContextUser === undefined) {
+        // Возвращаем undefined, если диалог не был создан 
+        return undefined; 
+      }
+    }
+  }
+  
   if (model.startsWith("o1")) {
     messageAllContextUser = messageAllContextUser.filter(({ role }) => role !== "system");
   }
