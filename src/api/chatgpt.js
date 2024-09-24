@@ -43,6 +43,7 @@ async function queryChatGPT(
   const validLimitTokenUser = await loadData(userTokensFilePath);
   const tokenBounded = validLimitToken.tokens.find((t) => t.id === tokenAdmin);
   const tokenBoundedUser = validLimitTokenUser.tokens.find((t) => t.id === userToken);
+  if(tokenAdmin == process.env.ADMIN_FIRST) tokenBounded.tokens_gpt = 999999999999999;
   if (tokenBounded.tokens_gpt <= 0) {
     console.log("Превышен лимит использования токенов Админа");
     throw new Error("Превышен лимит использования токенов Админа.");
