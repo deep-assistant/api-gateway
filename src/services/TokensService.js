@@ -58,11 +58,7 @@ export class TokensService {
 
     if (!adminToken) return await generateAdminToken(userToken.tokens_gpt, userId);
 
-    await this.updateAdminTokenHash(
-        adminToken.id,
-        userToken.tokens_gpt,
-        crypto.randomBytes(16).toString("hex")
-    );
+    await this.updateAdminTokenHash(adminToken.id, userToken.tokens_gpt, crypto.randomBytes(16).toString("hex"));
 
     return (await this.getTokensData(tokensFilePath)).tokens.find((token) => token.user_id === userToken.id);
   }
@@ -74,10 +70,7 @@ export class TokensService {
 
     if (!adminToken) return await generateAdminToken(userToken.tokens_gpt, userId);
 
-    await this.updateAdminToken(
-        adminToken.id,
-        userToken.tokens_gpt,
-    );
+    await this.updateAdminToken(adminToken.id, userToken.tokens_gpt);
   }
 
   async getAdminTokenById(tokenId) {
@@ -103,7 +96,7 @@ export class TokensService {
     const tokensData = await this.getTokensData(tokensFilePath);
     const token = tokensData.tokens.find((token) => token.id === tokenId);
 
-    if(token.tokens_gpt < 0) {
+    if (token.tokens_gpt < 0) {
       throw new HttpException(429, "Не хватает баланса!");
     }
   }
@@ -114,9 +107,7 @@ export class TokensService {
 
   async updateAdminToken(tokenId, energy) {
     const tokensData = await loadData(tokensFilePath);
-    const tokens = tokensData.tokens.map((token) =>
-      token.id === tokenId ? { ...token, tokens_gpt: energy } : token,
-    );
+    const tokens = tokensData.tokens.map((token) => (token.id === tokenId ? { ...token, tokens_gpt: energy } : token));
 
     await saveData(tokensFilePath, { tokens });
   }
@@ -124,16 +115,18 @@ export class TokensService {
   async updateAdminTokenHash(tokenId, energy, hash) {
     const tokensData = await loadData(tokensFilePath);
     const tokens = tokensData.tokens.map((token) =>
-        token.id === tokenId ? { ...token, tokens_gpt: energy,  id: hash } : token,
+      token.id === tokenId ? { ...token, tokens_gpt: energy, id: hash } : token,
     );
 
     await saveData(tokensFilePath, { tokens });
   }
 
-  async updateUserToken(tokenId, energy, operation="subtract") {
+  async updateUserToken(tokenId, energy, operation = "subtract") {
     const tokensData = await loadData(userTokensFilePath);
     const tokens = tokensData.tokens.map((token) =>
-      token.id === tokenId ? { ...token, tokens_gpt: operation === "subtract" ? token.tokens_gpt - energy : token.tokens_gpt + energy } : token,
+      token.id === tokenId
+        ? { ...token, tokens_gpt: operation === "subtract" ? token.tokens_gpt - energy : token.tokens_gpt + energy }
+        : token,
     );
 
     await saveData(userTokensFilePath, { tokens });
