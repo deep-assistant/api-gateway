@@ -24,6 +24,7 @@ import tokensController from "./contollers/tokensController.js";
 import { completionsService, tokensService } from "./services/index.js";
 import systemMessagesController from "./contollers/systemMessagesController.js";
 import referralController from "./contollers/referralController.js";
+import transcriptionsController from "./contollers/transcriptionsController.js";
 
 const asyncPipeline = promisify(pipeline);
 
@@ -436,6 +437,7 @@ app.use("/", completionsController);
 app.use("/", tokensController);
 app.use("/", systemMessagesController);
 app.use("/", referralController);
+app.use("/", transcriptionsController);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
