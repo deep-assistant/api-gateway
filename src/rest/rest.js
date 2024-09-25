@@ -8,6 +8,7 @@ export function rest(fn) {
 
       if (response instanceof HttpResponse) {
         res.status(response.status).send(response.body);
+        return;
       }
       if (response instanceof SSEResponse) {
         response.write(res);
