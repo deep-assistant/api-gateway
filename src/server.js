@@ -25,6 +25,7 @@ import { completionsService, tokensService } from "./services/index.js";
 import systemMessagesController from "./contollers/systemMessagesController.js";
 import referralController from "./contollers/referralController.js";
 import transcriptionsController from "./contollers/transcriptionsController.js";
+import cors from "cors";
 
 const asyncPipeline = promisify(pipeline);
 
@@ -39,6 +40,7 @@ const app = express();
 const PORT = process.env.PORT;
 
 app.use(bodyParser.json());
+app.use(cors());
 
 initializeFiles();
 
