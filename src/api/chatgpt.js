@@ -60,12 +60,6 @@ async function queryChatGPT(
   const systemMessage = { role: "system", content: systemMessageContent || "You are chatting with an AI assistant." };
   role = "user";
   const userMessage = { role: "user", content: userQuery };
-  // let messageAllContextUser = singleMessage
-  //   ? [systemMessage, userMessage]
-  //   : await addNewMessage(dialogName, userMessage.content, role, systemMessage.content, systemMessageContent);
-  // if (messageAllContextUser === undefined) {
-  //   messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
-  // }
 
   let messageAllContextUser;
   if (singleMessage) {
@@ -87,6 +81,9 @@ async function queryChatGPT(
     messageAllContextUser = messageAllContextUser.filter(({ role }) => role !== "system");
   }
 
+  console.log('messageAllContextUser11111111111')
+  console.log(messageAllContextUser)
+  console.log('messageAllContextUser1111111')
   try {
     const endpoint = config.endpoint;
     const response = await endpoint.chat.completions.create({
