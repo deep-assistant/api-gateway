@@ -89,10 +89,8 @@ async function isValidUserToken(userName) {
   return tokensData?.tokens.some((tokenEntry) => tokenEntry.id === userName);
 }
 
-
 // Функция синхронизации контекста данных
 async function addNewMessage(dialogName, messageContent, senderRole, systemMessageContent) {
-
   let dialogsData = await loadData(dialogsFilePath);
   if (!dialogsData) dialogsData = { dialogs: [] };
   let dialog = dialogsData.dialogs.find((d) => d.name === dialogName);
@@ -101,11 +99,13 @@ async function addNewMessage(dialogName, messageContent, senderRole, systemMessa
   }
 
   // Проверяем, если системного сообщения еще нет, добавляем
-  
-  if(dialog.messages[dialog.messages.length -1].role != senderRole ||
-     dialog.messages[dialog.messages.length -1].content != messageContent){
+
+  if (
+    dialog.messages[dialog.messages.length - 1].role != senderRole ||
+    dialog.messages[dialog.messages.length - 1].content != messageContent
+  ) {
     // Проверяем, если системного сообщения еще нет, добавляем
-    const existingSystemMessageIndex = dialog.messages.findIndex(msg => msg.role === "system");
+    const existingSystemMessageIndex = dialog.messages.findIndex((msg) => msg.role === "system");
 
     if (existingSystemMessageIndex !== -1) {
       // Удаляем старое системное сообщение
@@ -123,7 +123,6 @@ async function addNewMessage(dialogName, messageContent, senderRole, systemMessa
   }
   return dialog.messages;
 }
-
 
 async function addNewDialogs(dialogName, messageContent, senderRole, systemMessageContent = "") {
   let dialogsData = await loadData(dialogsFilePath);
