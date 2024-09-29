@@ -71,19 +71,19 @@ async function queryChatGPT(
       messageAllContextUser = await addNewDialogs(dialogName, userMessage.content, role, systemMessage.content);
       // Проверяем, был ли диалог создан
       if (messageAllContextUser === undefined) {
-        // Возвращаем undefined, если диалог не был создан 
-        return undefined; 
+        // Возвращаем undefined, если диалог не был создан
+        return undefined;
       }
     }
   }
-  
+
   if (model.startsWith("o1")) {
     messageAllContextUser = messageAllContextUser.filter(({ role }) => role !== "system");
   }
 
-  console.log('messageAllContextUser11111111111')
-  console.log(messageAllContextUser)
-  console.log('messageAllContextUser1111111')
+  console.log("messageAllContextUser11111111111");
+  console.log(messageAllContextUser);
+  console.log("messageAllContextUser1111111");
   try {
     const endpoint = config.endpoint;
     const response = await endpoint.chat.completions.create({
