@@ -90,13 +90,13 @@ export const llmsConfig = {
         endpoint: openai_aiguoguo,
         convertationEnergy: 10,
     },
-    "claude-3-sonnet": {
-        modelName: "claude-3-sonnet-20240229",
+    "claude-3-5-sonnet": {
+        modelName: "claude-3-5-sonnet-20240620",
         endpoint: openai_aiguoguo,
         convertationEnergy: 0.7,
     },
-    "claude-3-5-sonnet": {
-        modelName: "claude-3-5-sonnet-20240620",
+    "claude-3-opus": {
+        modelName: "claude-3-opus-20240229",
         endpoint: openai_aiguoguo,
         convertationEnergy: 0.07,
     },
@@ -175,9 +175,9 @@ export const tryCompletionsConfig = {
         "gpt-3.5-turbo_guo",
         "gpt-3.5-turbo-0125_guo",
     ],
-    "claude-3-5-sonnet": [
+    "claude-3-opus": [
+        "claude-3-opus",
         "claude-3-5-sonnet",
-        "claude-3-sonnet",
         "claude-3-haiku",
         "gpt-4o-plus",
         "gpt-4o",
@@ -190,8 +190,8 @@ export const tryCompletionsConfig = {
         "gpt-3.5-turbo_guo",
         "gpt-3.5-turbo-0125_guo",
     ],
-    "claude-3-sonnet": [
-        "claude-3-sonnet",
+    "claude-3-5-sonnet": [
+        "claude-3-5-sonnet",
         "claude-3-haiku",
         "gpt-4o-plus",
         "gpt-4o",
