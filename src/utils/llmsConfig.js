@@ -32,7 +32,7 @@ export const llmsConfig = {
     },
     "gpt-4o-plus": {
         modelName: "gpt-4o",
-        endpoint: openai_original,
+        endpoint: openai,
         convertationEnergy: 0.8,
     },
     "gpt-4o-mini": {
@@ -145,9 +145,9 @@ export const tryCompletionsConfig = {
         "gpt-3.5-turbo-0125_guo",
     ],
     "gpt-4o-plus": [
+        "gpt-4o-plus",
         "gpt-4o",
         "o1-mini",
-        "gpt-4o-plus",
         "gpt-4o-mini",
         "gpt-auto",
         "gpt-3.5-turbo",
