@@ -18,11 +18,15 @@ completionsController.post(
     console.log(`\n токен проверен \n`);
     console.log(tokenId);
 
-    console.log(`\n задается тело запроса`);
-    const body = { ...req.body, stream_options: { include_usage: true } };
+    const body = req.body;
 
     const model = body.model;
     const stream = body.stream;
+
+    if (stream) {
+      body["stream_options"] = { include_usage: true };
+    }
+
     console.log(`\n модель: \n`);
     console.log(model);
     console.log(`\n параметр stream: \n`);
