@@ -6,19 +6,21 @@ export class CompletionsService {
     this.tokensService = tokensService;
   }
 
-  async updateCompletionTokens(tokenId, energy) {
+  async updateCompletionTokens(tokenId, energy, operation) {
     const adminToken = await this.tokensService.getAdminTokenById(tokenId);
     if (!adminToken) return;
 
     const user_token_id = adminToken.user_id;
-    if (!user_token_id) return;
+    if (!user_token_id) return false;
 
-    await this.tokensService.updateUserToken(user_token_id, energy);
+    await this.tokensService.updateUserToken(user_token_id, energy, operation);
 
     const user_token = await this.tokensService.getUserToken(adminToken.user_id);
-    if (!user_token) return;
+    if (!user_token) return false;
 
     await this.tokensService.updateAdminTokenByUserId(user_token.id);
+
+    return true;
   }
 
   async updateCompletionTokensByModel({ model, tokenId, tokens }) {
@@ -26,11 +28,14 @@ export class CompletionsService {
     const energy = Math.round(tokens / convertationEnergy);
 
     await this.updateCompletionTokens(tokenId, energy);
+
+    return energy;
   }
 
   async tryEndpoints(params, endpoints) {
     for await (const endpoint of endpoints) {
       try {
+        console.log(llmsConfig[endpoint]);
         const completionEndpoint = llmsConfig[endpoint].endpoint;
         const model = llmsConfig[endpoint].modelName;
 
