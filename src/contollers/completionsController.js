@@ -52,15 +52,24 @@ completionsController.post(
     console.log(completion);
 
     return new SSEResponse(async () => {
+      if (!completion) {
+        res.write(SSEResponse.sendSSEEvent("[DONE]"));
+        res.end();
+        return;
+      }
+
       for await (const chunk of completion) {
+        if (chunk.usage) {
+          const tokens = chunk.usage.total_tokens;
+
+          chunk.usage.energy = await completionsService.updateCompletionTokensByModel({
+            model,
+            tokenId,
+            tokens,
+          });
+        }
+
         res.write(SSEResponse.sendJSONEvent(chunk));
-
-        if (!chunk.usage) continue;
-
-        const tokens = chunk.usage.total_tokens;
-        console.log(`\n tokens: \n`);
-        console.log(tokens);
-        await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
       }
 
       res.write(SSEResponse.sendSSEEvent("[DONE]"));
