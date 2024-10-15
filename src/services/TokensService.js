@@ -41,6 +41,11 @@ export class TokensService {
     return this.getUserTokenById(tokenId, await this.getTokensData(userTokensFilePath));
   }
 
+  async hasUserToken(tokenId) {
+    const tokensData = await this.getTokensData(userTokensFilePath);
+    return !!tokensData.tokens.find((token) => token.id === tokenId);
+  }
+
   async getAdminTokenByUserId(userId) {
     const userToken = await this.getUserToken(userId);
     const tokensData = await this.getTokensData(tokensFilePath);
@@ -96,7 +101,7 @@ export class TokensService {
     const tokensData = await this.getTokensData(tokensFilePath);
     const token = tokensData.tokens.find((token) => token.id === tokenId);
 
-    if (token.tokens_gpt < 0) {
+    if (token.tokens_gpt <= 0) {
       throw new HttpException(429, "Не хватает баланса!");
     }
   }
@@ -107,7 +112,14 @@ export class TokensService {
 
   async updateAdminToken(tokenId, energy) {
     const tokensData = await loadData(tokensFilePath);
-    const tokens = tokensData.tokens.map((token) => (token.id === tokenId ? { ...token, tokens_gpt: energy } : token));
+    const tokens = tokensData.tokens.map((token) =>
+      token.id === tokenId
+        ? {
+            ...token,
+            tokens_gpt: energy,
+          }
+        : token,
+    );
 
     await saveData(tokensFilePath, { tokens });
   }
@@ -125,7 +137,10 @@ export class TokensService {
     const tokensData = await loadData(userTokensFilePath);
     const tokens = tokensData.tokens.map((token) =>
       token.id === tokenId
-        ? { ...token, tokens_gpt: operation === "subtract" ? token.tokens_gpt - energy : token.tokens_gpt + energy }
+        ? {
+            ...token,
+            tokens_gpt: operation === "subtract" ? token.tokens_gpt - energy : token.tokens_gpt + energy,
+          }
         : token,
     );
 
