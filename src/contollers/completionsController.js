@@ -24,36 +24,38 @@ completionsController.post(
         const model = body.model;
         const stream = body.stream;
 
-
         console.log(`\n модель: \n`);
         console.log(model);
         console.log(`\n параметр stream: \n`);
         console.log(stream);
 
-        if (model.startsWith('o1') && stream) {
+        if ((model.startsWith("o1") || model.startsWith("claude")) && stream) {
             const completion = await completionsService.completions({...body, stream: false});
             const tokens = completion.usage.total_tokens;
             await completionsService.updateCompletionTokensByModel({model, tokenId, tokens});
 
             return new SSEResponse(async () => {
-                res.write(SSEResponse.sendJSONEvent({
+                res.write(
+                    SSEResponse.sendJSONEvent({
                         choices: [{delta: completion.choices[0].message, finish_reason: null, index: 0}],
                         created: completion.created,
                         id: completion.id,
                         model: completion.model,
-                        object: 'chat.completion.chunk'
-                    }
-                ));
+                        object: "chat.completion.chunk",
+                    }),
+                );
 
-                res.write(SSEResponse.sendJSONEvent({
-                    choices: [{delta: {}, finish_reason: 'stop', index: 0}],
-                    created: completion.created,
-                    id: completion.id,
-                    model: completion.model,
-                    object: 'chat.completion.chunk'
-                }))
+                res.write(
+                    SSEResponse.sendJSONEvent({
+                        choices: [{delta: {}, finish_reason: "stop", index: 0}],
+                        created: completion.created,
+                        id: completion.id,
+                        model: completion.model,
+                        object: "chat.completion.chunk",
+                    }),
+                );
 
-                console.log(completion)
+                console.log(completion);
 
                 const tokens = completion.usage.total_tokens;
 
@@ -63,16 +65,18 @@ completionsController.post(
                     tokens,
                 });
 
-                res.write(SSEResponse.sendJSONEvent({
-                    id: completion.id,
-                    object: 'chat.completion.chunk',
-                    created: completion.created,
-                    model: completion.model,
-                    system_fingerprint: '',
-                    choices: [],
-                    usage: completion.usage
-                }))
-
+                console.log(completion)
+                res.write(
+                    SSEResponse.sendJSONEvent({
+                        id: completion.id,
+                        object: "chat.completion.chunk",
+                        created: completion.created,
+                        model: completion.model,
+                        system_fingerprint: "",
+                        choices: [],
+                        usage: completion.usage,
+                    }),
+                );
 
                 res.write(SSEResponse.sendSSEEvent("[DONE]"));
                 res.end();
@@ -85,7 +89,7 @@ completionsController.post(
 
         if (!stream) {
             const completion = await completionsService.completions(body);
-            console.log(completion)
+            console.log(completion);
             const tokens = completion.usage.total_tokens;
             await completionsService.updateCompletionTokensByModel({model, tokenId, tokens});
 
