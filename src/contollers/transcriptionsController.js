@@ -47,8 +47,10 @@ transcriptionsController.post(
       body: formData,
     });
 
-    const duration = Math.ceil(estimateDuration(file.buffer, 128) * 1.2);
-    await completionsService.updateCompletionTokens(tokenId, duration * 15);
+    if (response.ok) {
+      const duration = Math.ceil(estimateDuration(file.buffer, 128) * 1.2);
+      await completionsService.updateCompletionTokens(tokenId, duration * 15);
+    }
 
     const responseData = await response.json();
 
