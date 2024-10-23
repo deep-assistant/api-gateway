@@ -10,13 +10,6 @@ const transcriptionsController = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-function estimateDuration(buffer, bitrateKbps) {
-  const fileSizeBytes = buffer.length; // Получаем размер буфера в байтах
-  const bitrateBps = bitrateKbps * 1000; // Приводим битрейт к битам в секунду
-
-  return (fileSizeBytes * 8) / bitrateBps; // Возвращаем примерную длительность в секундах
-}
-
 transcriptionsController.post(
   "/v1/audio/transcriptions",
   upload.single("file"),
@@ -33,26 +26,27 @@ transcriptionsController.post(
     await tokensService.isHasBalanceToken(tokenId);
 
     const formData = new FormData();
-    formData.append("file", file.buffer, file.originalname);
-    formData.append("model", model);
+    formData.append("audio", file.buffer, file.originalname);
     formData.append("language", language);
-    formData.append("response_format", "verbose_json");
 
-    const response = await fetch("https://api.goapi.ai/v1/audio/transcriptions", {
+    const response = await fetch("https://api.deepinfra.com/v1/inference/openai/whisper-large-v3", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.FREE_OPENAI_KEY}`,
         ...formData.getHeaders(),
       },
       body: formData,
     });
 
+    const responseData = await response.json();
+
     if (response.ok) {
-      const duration = Math.ceil(estimateDuration(file.buffer, 128) * 1.2);
+      const duration = Math.ceil(responseData.input_length_ms / 1000);
+      console.log(duration);
       await completionsService.updateCompletionTokens(tokenId, duration * 15);
     }
 
-    const responseData = await response.json();
+    console.log(responseData);
 
     return new HttpResponse(response.status, responseData);
   }),
