@@ -5,3 +5,4 @@ src/db/dialogs.json
 src/db/referrals.json
 .env
 usersfile
+Dockerfile
