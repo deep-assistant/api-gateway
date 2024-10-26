@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 
 import { exec } from 'child_process'; // Импортируем exec с помощью import
-import OpenAI from 'openai'; 
 
-
-const openai = new OpenAI({
- apiKey: "",
- baseURL: "https://api.deep-foundation.tech/v1/"
-});
 
 async function main() {
  console.log('===================================================');
@@ -70,14 +64,6 @@ async function main() {
   });
  });
 
- // 5. Выполнение OpenAI API запроса
- console.log(' Running OpenAI API request');
- const chatCompletion = await openai.chat.completions.create({
-  messages: [{ role: 'user', content: 'Say this is a test' }],
-  model: 'gpt-4o-mini',
- });
- console.log(' OpenAI response:');
- console.log(chatCompletion.choices[0].message.content);
 
  console.log('===================================================');
  console.log(' Update process completed');
