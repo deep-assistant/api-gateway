@@ -6,3 +6,4 @@ src/db/referrals.json
 .env
 usersfile
 Dockerfile
+docker-compose.test.yml
