@@ -7,3 +7,4 @@ src/db/referrals.json
 usersfile
 Dockerfile
 docker-compose.test.yml
+package-lock.json
