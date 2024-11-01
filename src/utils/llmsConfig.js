@@ -24,11 +24,18 @@ const openai_aiguoguo = new OpenAI({
     baseURL: process.env.AIGUOGUO_BASE_URL,
 });
 
+const openai_claude_aiguoguo = new OpenAI({
+    timeout: 50 * 1000,
+    apiKey: process.env.AIGUOGUO_CLAUDE_API_KEY,
+    baseURL: process.env.AIGUOGUO_CLAUDE_BASE_URL,
+});
+
+
 export const llmsConfig = {
-    "gpt-4o": {
-        modelName: "gpt-4o",
-        endpoint: openai_original,
-        convertationEnergy: 0.8,
+    "gpt-4o-unofficial": {
+        modelName: "gpt-4-gizmo-g-pmuQfob8d",
+        endpoint: openai,
+        convertationEnergy: 0.7,
     },
     "gpt-4o-plus": {
         modelName: "gpt-4o",
@@ -97,17 +104,17 @@ export const llmsConfig = {
     },
     "claude-3-haiku": {
         modelName: "claude-3-haiku-20240307",
-        endpoint: openai_aiguoguo,
+        endpoint: openai_claude_aiguoguo,
         convertationEnergy: 10,
     },
     "claude-3-5-sonnet": {
-        modelName: "claude-3-5-sonnet-20240620",
-        endpoint: openai_aiguoguo,
+        modelName: "claude-3-5-sonnet-20241022",
+        endpoint: openai_claude_aiguoguo,
         convertationEnergy: 0.7,
     },
     "claude-3-opus": {
         modelName: "claude-3-opus-20240229",
-        endpoint: openai_aiguoguo,
+        endpoint: openai_claude_aiguoguo,
         convertationEnergy: 0.07,
     },
     uncensored: {
