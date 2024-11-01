@@ -1,145 +1,94 @@
-import { fileURLToPath } from "url";
-import path from "path";
-import { loadData, saveData } from "../utils/dbManager.js";
-import { HttpException } from "../rest/HttpException.js";
+import {CronJob} from "cron";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const referralsPath = path.join(__dirname, "../db", "referrals.json");
 
 export class ReferralService {
-  constructor(tokensService) {
-    this.tokensService = tokensService;
-  }
+    constructor(completionsService, referralRepository, tokensRepository) {
+        this.completionsService = completionsService;
+        this.referralRepository = referralRepository;
+        this.tokensRepository = tokensRepository;
 
-  async getReferrals() {
-    let referralsData = await loadData(referralsPath);
-
-    if (!referralsData || !referralsData.referrals) {
-      referralsData = { referrals: [] };
+        this.runAwardUpdate();
     }
 
-    return referralsData;
-  }
 
-  async createReferral(id, parent = null) {
-    console.log("______createReferral________");
-    const referralsData = await this.getReferrals();
-    const foundReferral = this.findReferralById(referralsData, id);
+    async createReferral(id, parent = null) {
+        const referral = await this.referralRepository.createReferral(id, parent)
 
-    console.log({ foundReferral });
-    if (foundReferral) {
-      throw new HttpException(400, "Реферал уже существует!");
+        if (parent) {
+            const foundParent = await this.referralRepository.findReferralById(parent);
+
+            if (foundParent) {
+                await this.referralRepository.addParent(id, parent)
+
+                const token = await this.tokensRepository.getTokenByUserId(id)
+                await this.completionsService.updateCompletionTokens(token.user_id, 5000, "add")
+
+                const tokenParent = await this.tokensRepository.getTokenByUserId(id)
+                await this.completionsService.updateCompletionTokens(tokenParent.user_id, 5000, "add")
+            }
+        }
+
+        return referral;
     }
 
-    const referral = {
-      id,
-      parent,
-      children: [],
-      createDate: new Date().toISOString(),
-      lastUpdate: new Date().toISOString(),
-      isActivated: false,
-      award: 10000,
-    };
+    async getReferral(id) {
+        const foundReferral = await this.referralRepository.findReferralById(id);
 
-    console.log({ referral });
+        if (!foundReferral) {
+            return this.createReferral(id);
+        }
 
-    if (parent) {
-      const foundParent = this.findReferralById(referralsData, parent);
-
-      console.log({ foundParent });
-      if (foundParent) {
-        foundParent.children.push(id);
-        console.log({ foundParent });
-        await this.tokensService.updateUserToken(id, 5000, "add");
-        await this.tokensService.updateAdminTokenByUserId(id);
-
-        await this.tokensService.updateUserToken(parent, 5000, "add");
-        await this.tokensService.updateAdminTokenByUserId(parent);
-      }
+        return foundReferral;
     }
 
-    referralsData.referrals.push(referral);
-    console.log({ referral });
+    async updateParent(parentId) {
+        if (!parentId) {
+            return;
+        }
 
-    await saveData(referralsPath, referralsData);
+        const foundParentReferral = await this.referralRepository.findReferralById(parentId)
+        if (!foundParentReferral) return;
 
-    return referral;
-  }
-
-  async getReferral(id) {
-    const referralsData = await this.getReferrals();
-    const foundReferral = this.findReferralById(referralsData, id);
-
-    if (!foundReferral) {
-      return this.createReferral(id);
+        await this.referralRepository.updateReferral(parentId, {award: foundParentReferral.award + 500})
     }
 
-    return foundReferral;
-  }
+    async getTokensToUpdate(token) {
+        if (token.tokens_gpt < 0) return 0
+        if (token.tokens_gpt < 30_000) {
+            const referral = await this.getReferral(token.user_id)
+            return referral?.award || 10_000
+        }
 
-  findReferralById(referralsData, id) {
-    return referralsData.referrals.find((referral) => referral.id === id);
-  }
-
-  async getAward(id) {
-    console.log("______getAward________");
-    const referralsData = await this.getReferrals();
-    const foundReferral = await this.getReferral(id);
-
-    const lastUpdate = new Date(foundReferral.lastUpdate);
-
-    const nextLastDate = new Date(lastUpdate);
-    nextLastDate.setDate(lastUpdate.getDate() + 1);
-
-    const currentDate = new Date();
-
-    if (nextLastDate < currentDate) {
-      const foundInitialReferral = this.findReferralById(referralsData, foundReferral.id);
-      foundInitialReferral.lastUpdate = currentDate;
-
-      const isAward = await this.updateTokens(foundReferral.id, foundReferral.award);
-
-      if (!foundReferral.isActivated) {
-        const foundInitialReferral = this.findReferralById(referralsData, foundReferral.id);
-        foundInitialReferral.isActivated = true;
-
-        await this.updateParent(referralsData, foundReferral.parent);
-        await this.updateTokens(foundReferral.parent, 10000, "add");
-
-        await saveData(referralsPath, referralsData);
-
-        return { isAward, updateParents: foundReferral.parent ? [foundReferral.parent] : [] };
-      }
-
-      await saveData(referralsPath, referralsData);
-
-      return { isAward, updateParents: [] };
+        return 0
     }
 
-    return { isAward: false };
-  }
+    runAwardUpdate() {
+        CronJob.from({
+            cronTime: "0 * * * * *",
+            onTick: async () => {
+                const tokensData = await this.tokensRepository.getAllTokens();
 
-  async updateParent(referralsData, parentId) {
-    if (!parentId) {
-      return;
+                for (const token of tokensData.tokens) {
+                    const award = await this.getTokensToUpdate(token)
+                    await this.completionsService.updateCompletionTokens(token.user_id, award, 'add')
+
+                    const foundReferral = await this.referralRepository.findReferralById(token.user_id)
+
+
+                    if (!foundReferral?.isActivated) {
+                        if (foundReferral?.parent) {
+                            await this.updateParent(foundReferral.parent)
+
+                            await this.referralRepository.updateReferral(foundReferral.id, {isActivated: true})
+                            await this.completionsService.updateCompletionTokens(foundReferral.id, 5000, 'add')
+
+                            await this.completionsService.updateCompletionTokens(foundReferral.parent, 5000, 'add')
+                        }
+                    }
+                }
+            },
+            start: true,
+            timeZone: "Europe/Moscow",
+        });
     }
-
-    const foundParentReferral = this.findReferralById(referralsData, parentId);
-    if (!foundParentReferral) return;
-
-    foundParentReferral.award += 500;
-  }
-
-  async updateTokens(id, awards) {
-    const userToken = await this.tokensService.getUserToken(id);
-
-    if (userToken.tokens_gpt >= 30_000) return false;
-
-    await this.tokensService.updateUserToken(id, awards, "add");
-    await this.tokensService.updateAdminTokenByUserId(id);
-
-    return true;
-  }
 }
