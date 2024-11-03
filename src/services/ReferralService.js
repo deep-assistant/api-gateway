@@ -64,7 +64,7 @@ export class ReferralService {
 
     runAwardUpdate() {
         CronJob.from({
-            cronTime: "0 * * * * *",
+            cronTime: "0 0 0 * * *",
             onTick: async () => {
                 const tokensData = await this.tokensRepository.getAllTokens();
 
