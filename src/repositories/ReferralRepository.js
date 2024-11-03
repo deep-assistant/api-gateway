@@ -46,6 +46,14 @@ export class ReferralRepository {
         return referralsData.referrals.find(referral => referral.id === userId)
     }
 
+    async findOrCreateReferralById(userId) {
+        const referralsData = await this.getReferrals()
+
+        const referral = referralsData.referrals.find(referral => referral.id === userId)
+        if (!referral) return this.createReferral(userId)
+        return referral
+    }
+
     updateReferral(id, newReferral) {
         this.referralsDB.update(({referrals}) => {
             const foundReferral = referrals.find(referral => referral.id === id)

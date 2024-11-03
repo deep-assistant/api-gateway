@@ -72,7 +72,7 @@ export class ReferralService {
                     const award = await this.getTokensToUpdate(token)
                     await this.completionsService.updateCompletionTokens(token.user_id, award, 'add')
 
-                    const foundReferral = await this.referralRepository.findReferralById(token.user_id)
+                    const foundReferral = await this.referralRepository.findOrCreateReferralById(token.user_id)
 
 
                     if (!foundReferral?.isActivated) {
