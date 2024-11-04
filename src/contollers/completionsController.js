@@ -1,6 +1,6 @@
 import express from "express";
 
-import {completionsService, tokensService} from "../services/index.js";
+import {completionsService, dialogsService, tokensService} from "../services/index.js";
 
 import {rest} from "../rest/rest.js";
 import {HttpResponse} from "../rest/HttpResponse.js";
@@ -12,22 +12,13 @@ const completionsController = express.Router();
 completionsController.post(
     "/v1/chat/completions",
     rest(async ({req, res}) => {
-        console.log(`\n проверка токена`);
         const tokenId = tokensService.getTokenFromAuthorization(req.headers.authorization);
         await tokensService.isAdminToken(tokenId);
         await tokensService.isHasBalanceToken(tokenId);
-        console.log(`\n токен проверен \n`);
-        console.log(tokenId);
 
         const body = req.body;
-
         const model = body.model;
         const stream = body.stream;
-
-        console.log(`\n модель: \n`);
-        console.log(model);
-        console.log(`\n параметр stream: \n`);
-        console.log(stream);
 
         if ((model.startsWith("o1") || model.startsWith("claude")) && stream) {
             const completion = await completionsService.completions({...body, stream: false});
@@ -65,7 +56,7 @@ completionsController.post(
                     tokens,
                 });
 
-                console.log(completion)
+                console.log(completion);
                 res.write(
                     SSEResponse.sendJSONEvent({
                         id: completion.id,
@@ -89,23 +80,13 @@ completionsController.post(
 
         if (!stream) {
             const completion = await completionsService.completions(body);
-            console.log(completion);
             const tokens = completion.usage.total_tokens;
             await completionsService.updateCompletionTokensByModel({model, tokenId, tokens});
 
-            console.log(`\n без stream`);
-            console.log(`\n completion: \n`);
-            console.log(completion);
-            console.log(`\n tokens: \n`);
-            console.log(tokens);
             return new HttpResponse(200, completion);
         }
 
         const completion = await completionsService.completions(body);
-
-        console.log(`\n использование stream`);
-        console.log(`\n completion: \n`);
-        console.log(completion);
 
         return new SSEResponse(async () => {
             if (!completion) {
@@ -131,6 +112,40 @@ completionsController.post(
             res.write(SSEResponse.sendSSEEvent("[DONE]"));
             res.end();
         });
+    }),
+);
+
+completionsController.post(
+    "/completions",
+    rest(async ({req}) => {
+        await tokensService.isValidMasterToken(req.query.masterToken);
+
+        const body = req.body;
+        const model = body.model;
+        const content = body.content;
+        const systemMessage = body.systemMessage;
+        const userId = body.userId;
+
+        const token = await tokensService.getTokenByUserId(userId);
+
+        await dialogsService.addMessageToDialog(userId, content);
+
+        const messages = await dialogsService.getDialogWithSystem(userId, systemMessage);
+
+        console.log(messages);
+        const completion = await completionsService.completions({stream: false, model, messages});
+        const tokens = completion.usage.total_tokens;
+
+        console.log(completion);
+        await dialogsService.addMessageToDialog(userId, completion.choices[0].message.content);
+
+        completion.usage.energy = await completionsService.updateCompletionTokensByModel({
+            model,
+            tokenId: token.id,
+            tokens,
+        });
+
+        return new HttpResponse(200, completion);
     }),
 );
 
