@@ -192,6 +192,14 @@ export const tryCompletionsConfig = {
         "gpt-3.5-turbo_guo",
         "gpt-3.5-turbo-0125_guo",
     ],
+    "gpt-auto": [
+        "gpt-auto",
+        "gpt-4o-mini",
+        "gpt-3.5-turbo",
+        "gpt-4o-mini_guo",
+        "gpt-3.5-turbo_guo",
+        "gpt-3.5-turbo-0125_guo",
+    ],
     "claude-3-opus": [
         "claude-3-opus",
         "claude-3-5-sonnet",
