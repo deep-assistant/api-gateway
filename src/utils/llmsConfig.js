@@ -50,7 +50,7 @@ export const llmsConfig = {
     "gpt-auto": {
         modelName: "gpt-auto",
         endpoint: openai,
-        convertationEnergy: 13.9,
+        convertationEnergy: 6.4,
     },
     "meta-llama/Meta-Llama-3.1-405B": {
         modelName: "meta-llama/Meta-Llama-3.1-405B-Instruct",
