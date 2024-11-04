@@ -10,9 +10,9 @@ export class CompletionsService {
         const token = await this.tokensService.getTokenByUserId(tokenId);
         if (!token) return false;
 
-        const newTokens = operation === "subtract" ? token.tokens_gpt - energy : token.tokens_gpt + energy
+        const newTokens = operation === "subtract" ? token.tokens_gpt - energy : token.tokens_gpt + energy;
 
-        await this.tokensRepository.updateTokenByUserId(token.user_id, {tokens_gpt: newTokens})
+        await this.tokensRepository.updateTokenByUserId(token.user_id, {tokens_gpt: newTokens});
 
         return true;
     }
@@ -21,7 +21,8 @@ export class CompletionsService {
         const convertationEnergy = llmsConfig[model].convertationEnergy;
         const energy = Math.round(tokens / convertationEnergy);
 
-        await this.updateCompletionTokens(tokenId, energy, 'subtract');
+        const token = await this.tokensRepository.getTokenById(tokenId)
+        await this.updateCompletionTokens(token.user_id, energy, "subtract");
 
         return energy;
     }
@@ -45,5 +46,4 @@ export class CompletionsService {
 
         return this.tryEndpoints(params, modelsChain || [params.model, `${params.model}_guo`, "gpt-auto"]);
     }
-
 }

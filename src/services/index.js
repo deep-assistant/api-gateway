@@ -1,9 +1,9 @@
-import {TokensService} from "./TokensService.js";
-import {CompletionsService} from "./CompletionsService.js";
-import {SystemMessageService} from "./SystemMessageService.js";
-import {ReferralService} from "./ReferralService.js";
-import {dialogsRepository, referralRepository, tokensRepository} from "../repositories/index.js";
-import {DialogsService} from "./DialogsService.js";
+import { TokensService } from "./TokensService.js";
+import { CompletionsService } from "./CompletionsService.js";
+import { SystemMessageService } from "./SystemMessageService.js";
+import { ReferralService } from "./ReferralService.js";
+import { dialogsRepository, referralRepository, tokensRepository } from "../repositories/index.js";
+import { DialogsService } from "./DialogsService.js";
 
 export const tokensService = new TokensService(tokensRepository);
 export const completionsService = new CompletionsService(tokensService, tokensRepository);

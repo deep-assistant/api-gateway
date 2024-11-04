@@ -20,7 +20,6 @@ completionsController.post(
         const model = body.model;
         const stream = body.stream;
 
-
         if ((model.startsWith("o1") || model.startsWith("claude")) && stream) {
             const completion = await completionsService.completions({...body, stream: false});
             const tokens = completion.usage.total_tokens;
@@ -116,35 +115,38 @@ completionsController.post(
     }),
 );
 
-completionsController.post('/completions', rest(async ({req}) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
+completionsController.post(
+    "/completions",
+    rest(async ({req}) => {
+        await tokensService.isValidMasterToken(req.query.masterToken);
 
-    const body = req.body;
-    const model = body.model;
-    const content = body.content;
-    const systemMessage = body.systemMessage;
-    const userId = body.userId;
+        const body = req.body;
+        const model = body.model;
+        const content = body.content;
+        const systemMessage = body.systemMessage;
+        const userId = body.userId;
 
-    const token = await tokensService.getTokenByUserId(userId);
+        const token = await tokensService.getTokenByUserId(userId);
 
-    await dialogsService.addMessageToDialog(userId, content)
+        await dialogsService.addMessageToDialog(userId, content);
 
-    const messages = await dialogsService.getDialogWithSystem(userId, systemMessage)
+        const messages = await dialogsService.getDialogWithSystem(userId, systemMessage);
 
-    console.log(messages)
-    const completion = await completionsService.completions({stream: false, model, messages});
-    const tokens = completion.usage.total_tokens;
+        console.log(messages);
+        const completion = await completionsService.completions({stream: false, model, messages});
+        const tokens = completion.usage.total_tokens;
 
-    console.log(completion)
-    await dialogsService.addMessageToDialog(userId, completion.choices[0].message.content)
+        console.log(completion);
+        await dialogsService.addMessageToDialog(userId, completion.choices[0].message.content);
 
-    completion.usage.energy = await completionsService.updateCompletionTokensByModel({
-        model,
-        tokenId: token.user_id,
-        tokens
-    })
+        completion.usage.energy = await completionsService.updateCompletionTokensByModel({
+            model,
+            tokenId: token.id,
+            tokens,
+        });
 
-    return new HttpResponse(200, completion);
-}))
+        return new HttpResponse(200, completion);
+    }),
+);
 
 export default completionsController;
