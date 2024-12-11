@@ -42,3 +42,5 @@ export class DialogsRepository {
     return this.getAllDialogs().dialogs.find((dialog) => dialog.name === name);
   }
 }
+
+

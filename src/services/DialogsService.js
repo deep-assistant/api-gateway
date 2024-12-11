@@ -21,3 +21,4 @@ export class DialogsService {
     return [{ role: "system", content: systemMessage }, ...dialog.messages];
   }
 }
+
