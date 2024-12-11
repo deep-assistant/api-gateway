@@ -1,12 +1,4 @@
-import { fileURLToPath } from "url";
-import path from "path";
-import { loadData, saveData } from "../utils/dbManager.js";
 import { HttpException } from "../rest/HttpException.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const systemMessagesFilePath = path.join(__dirname, "../db", "systemMessages.json");
 
 export class SystemMessageService {
   createSystemMessageEntity(userId, systemMessage) {

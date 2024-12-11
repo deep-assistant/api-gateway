@@ -7,25 +7,16 @@ import { HttpResponse } from "../rest/HttpResponse.js";
 const tokensController = express.Router();
 
 tokensController.get(
-  "/token/admin",
+  "/token",
   rest(async ({ req }) => {
     await tokensService.isValidMasterToken(req.query.masterToken);
 
-    return new HttpResponse(200, await tokensService.getAdminTokenByUserId(req.query.userId));
+    return new HttpResponse(200, await tokensService.getTokenByUserId(req.query.userId));
   }),
 );
 
 tokensController.get(
-  "/token/user",
-  rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
-
-    return new HttpResponse(200, await tokensService.getUserToken(req.query.userId));
-  }),
-);
-
-tokensController.get(
-  "/token/user/has",
+  "/token/has",
   rest(async ({ req }) => {
     await tokensService.isValidMasterToken(req.query.masterToken);
 
@@ -35,23 +26,24 @@ tokensController.get(
 );
 
 tokensController.put(
-  "/token/user",
+  "/token",
   rest(async ({ req }) => {
     await tokensService.isValidMasterToken(req.query.masterToken);
 
     const { operation, amount } = req.body;
-    const token = await tokensService.getAdminTokenByUserId(req.query.userId);
-    console.log(token);
-    return new HttpResponse(200, await completionsService.updateCompletionTokens(token.id, amount, operation));
+
+    const token = await tokensService.getTokenByUserId(req.query.userId);
+
+    return new HttpResponse(200, await completionsService.updateCompletionTokens(token.user_id, amount, operation));
   }),
 );
 
 tokensController.post(
-  "/token/admin",
+  "/token",
   rest(async ({ req }) => {
     await tokensService.isValidMasterToken(req.query.masterToken);
 
-    return new HttpResponse(200, await tokensService.regenerateAdminTokenByUserId(req.query.userId));
+    return new HttpResponse(200, await tokensService.regenerateToken(req.query.userId));
   }),
 );
 
