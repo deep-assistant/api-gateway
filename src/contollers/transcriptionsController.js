@@ -53,9 +53,11 @@ transcriptionsController.post(
         const responseData = await response.json();
 
         if (response.ok) {
-            const duration = Math.ceil(responseData.duration);
+            const duration = (Math.ceil(responseData.duration) * 15);
             const token = await tokensService.getTokenById(tokenId)
-            await completionsService.updateCompletionTokens(token.user_id, duration * 15, "subtract");
+            console.log(duration, 'duration')
+            console.log(token, 'token')
+            await completionsService.updateCompletionTokens(token.user_id, duration, "subtract");
         }
 
         console.log(responseData);

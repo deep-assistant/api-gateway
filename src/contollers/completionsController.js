@@ -130,13 +130,11 @@ completionsController.post(
 
         await dialogsService.addMessageToDialog(userId, content);
 
-        const messages = await dialogsService.getDialogWithSystem(userId, systemMessage);
+        const messages = await dialogsService.getDialogWithSystem(userId, systemMessage, model);
 
-        console.log(messages);
         const completion = await completionsService.completions({stream: false, model, messages});
         const tokens = completion.usage.total_tokens;
 
-        console.log(completion);
         await dialogsService.addMessageToDialog(userId, completion.choices[0].message.content);
 
         completion.usage.energy = await completionsService.updateCompletionTokensByModel({
