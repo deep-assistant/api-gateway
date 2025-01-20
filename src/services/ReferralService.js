@@ -10,19 +10,15 @@ export class ReferralService {
   }
 
   async createReferral(id, parent = null) {
+    console.log(`[ создание реферала для ${id}, родитель: ${parent} ]`);
     const referral = await this.referralRepository.createReferral(id, parent);
 
     if (parent) {
       const foundParent = await this.referralRepository.findReferralById(parent);
-
       if (foundParent) {
+        console.log(`[ добавлен родитель для ${id} ]`);
         await this.referralRepository.addParent(id, parent);
-
-        const token = await this.tokensRepository.getTokenByUserId(id);
-        await this.completionsService.updateCompletionTokens(token.user_id, 5000, "add");
-
-        const tokenParent = await this.tokensRepository.getTokenByUserId(id);
-        await this.completionsService.updateCompletionTokens(tokenParent.user_id, 5000, "add");
+        await this.completionsService.updateCompletionTokens(foundParent.user_id, 5000, "add");
       }
     }
 
@@ -31,8 +27,8 @@ export class ReferralService {
 
   async getReferral(id) {
     const foundReferral = await this.referralRepository.findReferralById(id);
-
     if (!foundReferral) {
+      console.log(`[ реферал не найден, создается новый для ${id} ]`);
       return this.createReferral(id);
     }
 
@@ -40,14 +36,13 @@ export class ReferralService {
   }
 
   async updateParent(parentId) {
-    if (!parentId) {
-      return;
-    }
+    if (!parentId) return;
 
     const foundParentReferral = await this.referralRepository.findReferralById(parentId);
-    if (!foundParentReferral) return;
-
-    await this.referralRepository.updateReferral(parentId, { award: foundParentReferral.award + 500 });
+    if (foundParentReferral) {
+      console.log(`[ обновление награды для родителя ${parentId} ]`);
+      await this.referralRepository.updateReferral(parentId, { award: foundParentReferral.award + 500 });
+    }
   }
 
   async getTokensToUpdate(token) {
@@ -63,6 +58,7 @@ export class ReferralService {
     CronJob.from({
       cronTime: "0 0 0 * * *",
       onTick: async () => {
+        console.log(`[ выполнение CronJob для обновления наград ]`);
         const tokensData = await this.tokensRepository.getAllTokens();
 
         for (const token of tokensData.tokens) {
@@ -70,16 +66,12 @@ export class ReferralService {
           await this.completionsService.updateCompletionTokens(token.user_id, award, "add");
 
           const foundReferral = await this.referralRepository.findOrCreateReferralById(token.user_id);
-
-          if (!foundReferral?.isActivated) {
-            if (foundReferral?.parent) {
-              await this.updateParent(foundReferral.parent);
-
-              await this.referralRepository.updateReferral(foundReferral.id, { isActivated: true });
-              await this.completionsService.updateCompletionTokens(foundReferral.id, 5000, "add");
-
-              await this.completionsService.updateCompletionTokens(foundReferral.parent, 5000, "add");
-            }
+          if (!foundReferral?.isActivated && foundReferral?.parent) {
+            console.log(`[ активация реферала ${foundReferral.id} ]`);
+            await this.updateParent(foundReferral.parent);
+            await this.referralRepository.updateReferral(foundReferral.id, { isActivated: true });
+            await this.completionsService.updateCompletionTokens(foundReferral.id, 5000, "add");
+            await this.completionsService.updateCompletionTokens(foundReferral.parent, 5000, "add");
           }
         }
       },

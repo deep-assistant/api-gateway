@@ -29,14 +29,14 @@ export class CompletionsService {
     async tryEndpoints(params, endpoints) {
         for await (const endpoint of endpoints) {
             try {
-                console.log(llmsConfig[endpoint]);
+                // console.log(llmsConfig[endpoint]);
                 const completionEndpoint = llmsConfig[endpoint].endpoint;
                 const model = llmsConfig[endpoint].modelName;
 
                 return await completionEndpoint.chat.completions.create({...params, model});
             } catch (e) {
-                console.log(e);
-            }
+                console.log(`[Ошибка обращение к нейросети "${llmsConfig[endpoint].modelName}": "${e.message}"]`);
+           }
         }
     }
 

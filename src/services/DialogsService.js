@@ -15,9 +15,11 @@ export class DialogsService {
     return this.dialogsRepository.findDialogById(userId);
   }
 
-  async getDialogWithSystem(userId, systemMessage) {
+  async getDialogWithSystem(userId, systemMessage, model) {
     const dialog = await this.findDialogById(userId);
 
+    if (model.startsWith("o1"))  return dialog.messages;
+    
     return [{ role: "system", content: systemMessage }, ...dialog.messages];
   }
 }

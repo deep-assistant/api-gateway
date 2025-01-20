@@ -11,7 +11,9 @@ const completionsController = express.Router();
 //todo рефакторинг
 completionsController.post(
     "/v1/chat/completions",
-    rest(async ({req, res}) => {
+    rest(async ({ req, res }) => {
+        console.log(`[ POST /v1/chat/completions ]`);
+
         const tokenId = tokensService.getTokenFromAuthorization(req.headers.authorization);
         await tokensService.isAdminToken(tokenId);
         await tokensService.isHasBalanceToken(tokenId);
@@ -21,19 +23,21 @@ completionsController.post(
         const stream = body.stream;
 
         if ((model.startsWith("o1") || model.startsWith("claude")) && stream) {
-            const completion = await completionsService.completions({...body, stream: false});
+            console.log(`[ выполнение потоковой модели ${model} ]`);
+            const completion = await completionsService.completions({ ...body, stream: false });
+
             const tokens = completion.usage.total_tokens;
-            await completionsService.updateCompletionTokensByModel({model, tokenId, tokens});
+            await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
 
             return new SSEResponse(async () => {
                 res.write(
                     SSEResponse.sendJSONEvent({
-                        choices: [{delta: completion.choices[0].message, finish_reason: null, index: 0}],
+                        choices: [{ delta: completion.choices[0].message, finish_reason: null, index: 0 }],
                         created: completion.created,
                         id: completion.id,
                         model: completion.model,
                         object: "chat.completion.chunk",
-                    }),
+                    })
                 );
 
                 res.write(
@@ -46,7 +50,7 @@ completionsController.post(
                     }),
                 );
 
-                console.log(completion);
+                // console.log(completion);
 
                 const tokens = completion.usage.total_tokens;
 
@@ -56,7 +60,6 @@ completionsController.post(
                     tokens,
                 });
 
-                console.log(completion);
                 res.write(
                     SSEResponse.sendJSONEvent({
                         id: completion.id,
@@ -81,24 +84,26 @@ completionsController.post(
         if (!stream) {
             const completion = await completionsService.completions(body);
             const tokens = completion.usage.total_tokens;
-            await completionsService.updateCompletionTokensByModel({model, tokenId, tokens});
+            await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
 
+            console.log(`[ обработка завершена для модели ${model}, токены израсходованы: ${tokens} ]`);
             return new HttpResponse(200, completion);
         }
 
         const completion = await completionsService.completions(body);
 
         return new SSEResponse(async () => {
+
             if (!completion) {
                 res.write(SSEResponse.sendSSEEvent("[DONE]"));
                 res.end();
                 return;
             }
 
+            
             for await (const chunk of completion) {
                 if (chunk.usage) {
                     const tokens = chunk.usage.total_tokens;
-
                     chunk.usage.energy = await completionsService.updateCompletionTokensByModel({
                         model,
                         tokenId,
@@ -112,31 +117,31 @@ completionsController.post(
             res.write(SSEResponse.sendSSEEvent("[DONE]"));
             res.end();
         });
-    }),
+    })
 );
 
 completionsController.post(
     "/completions",
     rest(async ({req}) => {
         await tokensService.isValidMasterToken(req.query.masterToken);
+        console.log(`[ POST /completions ]`);
 
         const body = req.body;
         const model = body.model;
         const content = body.content;
         const systemMessage = body.systemMessage;
         const userId = body.userId;
-
+ 
+        console.log(`[ начало обработки для пользователя ${userId}, модель ${model} , запрос: "${content}"...`);
         const token = await tokensService.getTokenByUserId(userId);
 
         await dialogsService.addMessageToDialog(userId, content);
 
-        const messages = await dialogsService.getDialogWithSystem(userId, systemMessage);
+        const messages = await dialogsService.getDialogWithSystem(userId, systemMessage, model);
 
-        console.log(messages);
         const completion = await completionsService.completions({stream: false, model, messages});
         const tokens = completion.usage.total_tokens;
 
-        console.log(completion);
         await dialogsService.addMessageToDialog(userId, completion.choices[0].message.content);
 
         completion.usage.energy = await completionsService.updateCompletionTokensByModel({
@@ -144,7 +149,7 @@ completionsController.post(
             tokenId: token.id,
             tokens,
         });
-
+        console.log(`...завершение обработки для пользователя ${userId}, токены израсходованы: ${tokens} ]`);
         return new HttpResponse(200, completion);
     }),
 );
