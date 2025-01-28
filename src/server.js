@@ -12,9 +12,8 @@ import dialogsController from "./contollers/dialogsController.js";
 const app = express();
 const PORT = process.env.PORT;
 
-app.use(bodyParser.json({ limit: '100mb' }{ limit: '100mb' })); // Увеличиваем лимит для JSON
-app.use(bodyParser.urlencoded({ limit: '100mb', extended: true })); // Увеличиваем лимит для URL-encoded
-app.use(bodyParser.urlencoded({ limit: '100mb', extended: true })); 
+app.use(bodyParser.json({ limit: '300mb' })); // Увеличиваем лимит для JSON
+app.use(bodyParser.urlencoded({ limit: '300mb', extended: true })); // Увеличиваем лимит для URL-encoded
 app.use(cors());
 
 app.use("/", completionsController);
