@@ -114,8 +114,8 @@ async function addNewMessage(dialogName, messageContent, senderRole, systemMessa
 
   // Проверка и добавление системного сообщения
   if (
-    dialog.messages[dialog.messages.length - 1].role !== senderRole ||
-    dialog.messages[dialog.messages.length - 1].content !== messageContent
+    dialog.messages[dialog.messages.length - 1].role != senderRole ||
+    dialog.messages[dialog.messages.length - 1].content != messageContent
   ) {
     const existingSystemMessageIndex = dialog.messages.findIndex((msg) => msg.role === "system");
     if (existingSystemMessageIndex !== -1) {

@@ -11,54 +11,47 @@ export class ReferralRepository {
 
   async createReferral(id, parent) {
     const foundReferral = await this.findReferralById(id);
-
-    if (foundReferral) {
-      throw new HttpException(400, "Реферал уже существует!");
-    }
+    if (foundReferral) throw new HttpException(400, "Реферал уже существует!");
 
     const referral = {
       id,
-      parent,
+      parent: parent === "None" ? null : parent, // Фикс: нормализация
       children: [],
       createDate: new Date().toISOString(),
       lastUpdate: new Date().toISOString(),
       isActivated: false,
-      award: 10000,
+      award: parent ? 10000 : 0, // Фикс: логика награды
     };
 
     this.referralsDB.update(({ referrals }) => referrals.push(referral));
-
     return referral;
   }
 
   addParent(id, parentId) {
     this.referralsDB.update(({ referrals }) => {
-      const foundReferral = referrals.find((referral) => referral.id === parentId);
-      if (!foundReferral) return;
-
-      foundReferral.children.push(id);
+      const foundParent = referrals.find((r) => r.id === parentId);
+      if (!foundParent || foundParent.children.includes(id)) return; // Фикс: проверка дублей
+      foundParent.children.push(id);
+      foundParent.lastUpdate = new Date().toISOString(); // Обновление времени
     });
   }
 
   async findReferralById(userId) {
     const referralsData = await this.getReferrals();
-    return referralsData.referrals.find((referral) => referral.id === userId);
+    return referralsData.referrals.find((r) => r.id === userId);
   }
 
   async findOrCreateReferralById(userId) {
     const referralsData = await this.getReferrals();
-
-    const referral = referralsData.referrals.find((referral) => referral.id === userId);
-    if (!referral) return this.createReferral(userId);
-    return referral;
+    const referral = referralsData.referrals.find((r) => r.id === userId);
+    return referral || this.createReferral(userId);
   }
 
-  updateReferral(id, newReferral) {
+  updateReferral(id, newData) {
     this.referralsDB.update(({ referrals }) => {
-      const foundReferral = referrals.find((referral) => referral.id === id);
-      if (!foundReferral) return;
-
-      Object.assign(foundReferral, newReferral);
+      const index = referrals.findIndex((r) => r.id === id);
+      if (index === -1) return;
+      Object.assign(referrals[index], { ...newData, lastUpdate: new Date().toISOString() });
     });
   }
 }

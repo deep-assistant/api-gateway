@@ -46,12 +46,18 @@ export class ReferralService {
   }
 
   async getTokensToUpdate(token) {
-    if (token.tokens_gpt < 30_000) {
-      const referral = await this.getReferral(token.user_id);
-      return referral?.award || 10_000;
+    if (token.tokens_gpt >= 30_000) return 0;
+  
+    const referral = await this.getReferral(token.user_id);
+    
+    // Если реферал существует, гарантируем актуальность award
+    if (referral) {
+      const expectedAward = 10_000 + (referral.children?.length || 0) * 500;
+      return referral.award ?? expectedAward;
     }
-
-    return 0;
+  
+    // Если реферала нет, возвращаем базовое значение
+    return 10_000;
   }
 
   runAwardUpdate() {
@@ -80,3 +86,5 @@ export class ReferralService {
     });
   }
 }
+
+

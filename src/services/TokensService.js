@@ -39,7 +39,7 @@ export class TokensService {
   async isAdminToken(tokenId) {
     const tokensData = await this.tokensRepository.getAllTokens();
     const token = tokensData.tokens.find((token) => token.id === tokenId);
-    console.log(`[ проверка админ токена ${token}...`)
+    console.log(`[ проверка админ токена ${tokenId}...`)
     if (!token) {
       console.log(` не пройдена ]`)
       throw new HttpException(401, "Невалидный админ токен!");
@@ -51,7 +51,7 @@ export class TokensService {
     const tokensData = await this.tokensRepository.getAllTokens();
     const token = tokensData.tokens.find((token) => token.id === tokenId);
 
-    console.log(`[ проверка баналса у пользователя ${token}...`)
+    console.log(`[ проверка баналса у пользователя ${tokenId}...`)
 
     if(token.tokens_gpt == null) {
       console.log(` значение "null". выставлен баланс в 10к ]`)
