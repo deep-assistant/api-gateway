@@ -8,3 +8,4 @@ usersfile
 Dockerfile
 docker-compose.test.yml
 package-lock.json
+node_modules
