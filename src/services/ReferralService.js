@@ -59,6 +59,7 @@ export class ReferralService {
     // Если реферала нет, возвращаем базовое значение
     return 10_000;
   }
+  
 
   runAwardUpdate() {
     CronJob.from({
