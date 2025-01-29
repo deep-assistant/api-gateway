@@ -10,15 +10,17 @@ export class ReferralService {
   }
 
   async createReferral(id, parent = null) {
-    console.log(`[ создание реферала для ${id}, родитель: ${parent} ]`);
+    console.log(`[ создание ${id}, родитель: ${parent} ]`);
     const referral = await this.referralRepository.createReferral(id, parent);
 
     if (parent) {
       const foundParent = await this.referralRepository.findReferralById(parent);
       if (foundParent) {
+        await this.referralRepository.updateReferral(foundParent.id, { award: 10_000 + ((foundParent.children?.length+1) || 0) * 500 });
+        console.log(`[ежедневное пополнение юзера ${foundParent.id} с количеством рефералов ${(foundParent.children?.length+1)} теперь равно ${foundParent.award}]`)
         console.log(`[ добавлен родитель для ${id} ]`);
         await this.referralRepository.addParent(id, parent);
-        await this.completionsService.updateCompletionTokens(foundParent.user_id, 5000, "add");
+        await this.completionsService.updateCompletionTokens(foundParent.id, 5000, "add");
       }
     }
 
@@ -41,7 +43,8 @@ export class ReferralService {
     const foundParentReferral = await this.referralRepository.findReferralById(parentId);
     if (foundParentReferral) {
       console.log(`[ обновление награды для родителя ${parentId} ]`);
-      await this.referralRepository.updateReferral(parentId, { award: foundParentReferral.award + 500 });
+      
+      await this.referralRepository.updateReferral(parentId, { award: 10_000 + ((foundParentReferral.children?.length+1) || 0) * 500 });
     }
   }
 
@@ -52,7 +55,8 @@ export class ReferralService {
     
     // Если реферал существует, гарантируем актуальность award
     if (referral) {
-      const expectedAward = 10_000 + (referral.children?.length || 0) * 500;
+      const expectedAward = 10_000 + ((referral.children?.length+1) || 0) * 500;
+      if(referral.award != expectedAward) referral.award = expectedAward
       return referral.award ?? expectedAward;
     }
   

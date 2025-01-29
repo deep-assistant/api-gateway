@@ -20,8 +20,9 @@ export class ReferralRepository {
       createDate: new Date().toISOString(),
       lastUpdate: new Date().toISOString(),
       isActivated: false,
-      award: parent ? 10000 : 0, // Фикс: логика награды
+      award: parent ? 10500 : 10000, // Фикс: логика награды
     };
+
 
     this.referralsDB.update(({ referrals }) => referrals.push(referral));
     return referral;

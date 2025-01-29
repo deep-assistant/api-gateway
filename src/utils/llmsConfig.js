@@ -136,6 +136,17 @@ export const llmsConfig = {
     endpoint: openai_aiguoguo,
     convertationEnergy: 14.7,
   },
+  "deepseek-chat": {
+    modelName: "deepseek-chat",
+    endpoint: openai,
+    convertationEnergy: 5,
+  },
+  "deepseek-reasoner": {
+    modelName: "deepseek-reasoner",
+    endpoint: openai,
+    convertationEnergy: 2.5,
+  }
+
 };
 
 export const tryCompletionsConfig = {
@@ -236,5 +247,26 @@ export const tryCompletionsConfig = {
     "gpt-3.5-turbo",
     "gpt-3.5-turbo_guo",
     "gpt-3.5-turbo-0125_guo",
+  ],
+  "deepseek-chat": [
+    "deepseek-chat",
+    // "o1-mini",
+    // "gpt-4o-mini_go",
+    // "gpt-4o-mini",
+    // "gpt-auto",
+    // "gpt-3.5-turbo",
+    // "gpt-3.5-turbo_guo",
+    // "gpt-3.5-turbo-0125_guo",
+  ],
+  "deepseek-reasoner": [
+    "deepseek-reasoner",
+    "deepseek-chat",
+    // "o1-mini",
+    // "gpt-4o-mini_go",
+    // "gpt-4o-mini",
+    // "gpt-auto",
+    // "gpt-3.5-turbo",
+    // "gpt-3.5-turbo_guo",
+    // "gpt-3.5-turbo-0125_guo",
   ],
 };
