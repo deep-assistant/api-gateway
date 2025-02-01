@@ -145,7 +145,12 @@ export const llmsConfig = {
     modelName: "deepseek-reasoner",
     endpoint: openai,
     convertationEnergy: 2.5,
-  }
+  },
+  "o3-mini": {
+    modelName: "o3-mini",
+    endpoint: openai_original,
+    convertationEnergy: 1,
+  },
 
 };
 
@@ -241,7 +246,7 @@ export const tryCompletionsConfig = {
   ],
   "claude-3-haiku": [
     "claude-3-haiku",
-   "gpt-4o-mini_go",
+    "gpt-4o-mini_go",
     "gpt-4o-mini",
     "gpt-auto",
     "gpt-3.5-turbo",
@@ -262,6 +267,17 @@ export const tryCompletionsConfig = {
     "deepseek-reasoner",
     "deepseek-chat",
     "o1-mini",
+    "gpt-4o-mini_go",
+    "gpt-4o-mini",
+    "gpt-auto",
+    "gpt-3.5-turbo",
+    "gpt-3.5-turbo_guo",
+    "gpt-3.5-turbo-0125_guo",
+  ],
+  "o3-mini": [
+    "o3-mini",
+    "o1-mini",
+    "deepseek-reasoner",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
     "gpt-auto",
