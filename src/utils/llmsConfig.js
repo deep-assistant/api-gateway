@@ -30,6 +30,12 @@ const openai_claude_aiguoguo = new OpenAI({
   baseURL: process.env.AIGUOGUO_CLAUDE_BASE_URL,
 });
 
+const deepseek = new OpenAI({
+  timeout: 50 * 1000,
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: process.env.DEEPSEEK_BASE_URL,
+});
+
 export const llmsConfig = {
   "gpt-4o-unofficial": {
     modelName: "gpt-4-gizmo-g-pmuQfob8d",
@@ -136,12 +142,12 @@ export const llmsConfig = {
     endpoint: openai_aiguoguo,
     convertationEnergy: 14.7,
   },
-  "deepseek-chat": {
+  "deepseek-chat_guo": {
     modelName: "deepseek-chat",
     endpoint: openai,
     convertationEnergy: 5,
   },
-  "deepseek-reasoner": {
+  "deepseek-reasoner_guo": {
     modelName: "deepseek-reasoner",
     endpoint: openai,
     convertationEnergy: 2.5,
@@ -151,7 +157,16 @@ export const llmsConfig = {
     endpoint: openai_original,
     convertationEnergy: 1,
   },
-
+  "deepseek-chat": {
+    modelName: "deepseek-chat",
+    endpoint: deepseek,
+    convertationEnergy: 5,
+  },
+  "deepseek-reasoner": {
+    modelName: "deepseek-reasoner",
+    endpoint: deepseek,
+    convertationEnergy: 2.5,
+  },
 };
 
 export const tryCompletionsConfig = {
@@ -255,6 +270,7 @@ export const tryCompletionsConfig = {
   ],
   "deepseek-chat": [
     "deepseek-chat",
+    "deepseek-chat_guo",
     "o1-mini",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
@@ -265,7 +281,9 @@ export const tryCompletionsConfig = {
   ],
   "deepseek-reasoner": [
     "deepseek-reasoner",
+    "deepseek-reasoner_guo",
     "deepseek-chat",
+    "deepseek-chat_guo",
     "o1-mini",
     "gpt-4o-mini_go",
     "gpt-4o-mini",

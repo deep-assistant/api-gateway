@@ -26,10 +26,11 @@ export class CompletionsService {
         return energy;
     }
 
+
     async tryEndpoints(params, endpoints) {
         for await (const endpoint of endpoints) {
             try {
-                // console.log(llmsConfig[endpoint]);
+                console.log(`[обращение к модели нейросети "${llmsConfig[endpoint].modelName}", сообщение: "${params.messages[params.messages.length-1].content}"]`);
                 const completionEndpoint = llmsConfig[endpoint].endpoint;
                 const model = llmsConfig[endpoint].modelName;
 
