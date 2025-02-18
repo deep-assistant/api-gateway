@@ -18,6 +18,8 @@ docker-compose.prod.yml
 acme.json
 .prettierrc copy.js
 logs
+logs.txt
+logs.json
 logs.logs
 src/db/tokens.json
 src/db/tokens.json
