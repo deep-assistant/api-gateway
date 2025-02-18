@@ -102,7 +102,7 @@ export const llmsConfig = {
     convertationEnergy: 0.15,
   },
   "claude-3-haiku": {
-    modelName: "claude-3-haiku-20240307",
+    modelName: "claude-3-5-haiku-20241022",
     endpoint: openai,
     convertationEnergy: 10,
   },
