@@ -10,9 +10,7 @@ docker-compose.test.yml
 package-lock.json
 node_modules
 letsencrypt/acme.json
-src/db/tokens.json
 db/user_tokens.json
-src/db/tokens.json
 db/dialogs.json
 docker-compose.prod.yml
 acme.json
@@ -21,6 +19,3 @@ logs
 logs.txt
 logs.json
 logs.logs
-src/db/tokens.json
-src/db/tokens.json
-src/db/dialogs.json
