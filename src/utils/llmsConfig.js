@@ -107,6 +107,16 @@ export const llmsConfig = {
     endpoint: openai_original,
     convertationEnergy: 0.15,
   },
+  "o1-mini_GOAPI": {
+    modelName: "o1-mini",
+    endpoint: openai,
+    convertationEnergy: 0.4,
+  },
+  "o1-preview_GOAPI": {
+    modelName: "o1-preview",
+    endpoint: openai,
+    convertationEnergy: 0.15,
+  },
   "claude-3-haiku": {
     modelName: "claude-3-5-haiku-20241022",
     endpoint: openai,
@@ -171,7 +181,9 @@ export const llmsConfig = {
 
 export const tryCompletionsConfig = {
   "o1-preview": [
+    "o1-preview_GOAPI",
     "o1-preview",
+    "o1-mini_GOAPI",
     "o1-mini",
     "gpt-4o-plus",
     "gpt-4o-mini_go",
@@ -183,6 +195,7 @@ export const tryCompletionsConfig = {
     "gpt-3.5-turbo-0125_guo",
   ],
   "o1-mini": [
+    "o1-mini_GOAPI",
     "o1-mini",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
@@ -194,6 +207,7 @@ export const tryCompletionsConfig = {
   "gpt-4o-plus": [
     "gpt-4o-plus",
     "gpt-4o",
+    "o1-mini_GOAPI",
     "o1-mini",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
@@ -207,6 +221,7 @@ export const tryCompletionsConfig = {
     "gpt-4o",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
+    "o1-mini_GOAPI",
     "o1-mini",
     "gpt-auto",
     "gpt-3.5-turbo",
@@ -236,6 +251,7 @@ export const tryCompletionsConfig = {
     "claude-3-haiku",
     "gpt-4o-plus",
     "gpt-4o",
+    "o1-mini_GOAPI",
     "o1-mini",
    "gpt-4o-mini_go",
     "gpt-4o-mini",
@@ -250,6 +266,7 @@ export const tryCompletionsConfig = {
     "claude-3-haiku",
     "gpt-4o-plus",
     "gpt-4o",
+    "o1-mini_GOAPI",
     "o1-mini",
    "gpt-4o-mini_go",
     "gpt-4o-mini",
@@ -271,6 +288,7 @@ export const tryCompletionsConfig = {
   "deepseek-chat": [
     "deepseek-chat",
     "deepseek-chat_guo",
+    "o1-mini_GOAPI",
     "o1-mini",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
@@ -284,6 +302,7 @@ export const tryCompletionsConfig = {
     "deepseek-reasoner_guo",
     "deepseek-chat",
     "deepseek-chat_guo",
+    "o1-mini_GOAPI",
     "o1-mini",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
@@ -294,6 +313,7 @@ export const tryCompletionsConfig = {
   ],
   "o3-mini": [
     "o3-mini",
+    "o1-mini_GOAPI",
     "o1-mini",
     "deepseek-reasoner",
     "gpt-4o-mini_go",
