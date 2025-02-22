@@ -2,12 +2,14 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 
-import completionsController from "./contollers/completionsController.js";
-import tokensController from "./contollers/tokensController.js";
-import systemMessagesController from "./contollers/systemMessagesController.js";
-import referralController from "./contollers/referralController.js";
-import transcriptionsController from "./contollers/transcriptionsController.js";
-import dialogsController from "./contollers/dialogsController.js";
+import logger from "./logger.js";
+
+import completionsController from "./controllers/completionsController.js";
+import tokensController from "./controllers/tokensController.js";
+import systemMessagesController from "./controllers/systemMessagesController.js";
+import referralController from "./controllers/referralController.js";
+import transcriptionsController from "./controllers/transcriptionsController.js";
+import dialogsController from "./controllers/dialogsController.js";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -24,5 +26,5 @@ app.use("/", transcriptionsController);
 app.use("/", dialogsController);
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT}`);
 });

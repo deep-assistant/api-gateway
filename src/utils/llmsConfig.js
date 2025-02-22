@@ -6,7 +6,7 @@ const openai_original = new OpenAI({
   baseURL: process.env.OPENAI_ORIGINAL_BASE_URL,
 });
 
-const openai = new OpenAI({
+const openai_goapi = new OpenAI({
   timeout: 50 * 1000,
   apiKey: process.env.OPENAI_API_KEY,
   baseURL: process.env.OPENAI_BASE_URL,
@@ -39,12 +39,12 @@ const deepseek = new OpenAI({
 export const llmsConfig = {
   "gpt-4o-unofficial": {
     modelName: "gpt-4-gizmo-g-pmuQfob8d",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 0.8,
   },
   "gpt-4o-plus": {
     modelName: "gpt-4o",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 1,
   },
   "gpt-4o-mini": {
@@ -54,7 +54,7 @@ export const llmsConfig = {
   },
   "gpt-auto": {
     modelName: "gpt-auto",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 6.4,
   },
   "meta-llama/Meta-Llama-3.1-405B": {
@@ -94,7 +94,7 @@ export const llmsConfig = {
   },
   "gpt-4o-mini_go": {
     modelName: "gpt-4o-mini",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 14.6,
   },
   "o1-mini": {
@@ -107,34 +107,39 @@ export const llmsConfig = {
     endpoint: openai_original,
     convertationEnergy: 0.15,
   },
+  "o3-mini_GOAPI": {
+    modelName: "o3-mini",
+    endpoint: openai_goapi,
+    convertationEnergy: 1,
+  },
   "o1-mini_GOAPI": {
     modelName: "o1-mini",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 0.4,
   },
   "o1-preview_GOAPI": {
     modelName: "o1-preview",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 0.15,
   },
-  "claude-3-haiku": {
+  "claude-3-5-haiku": {
     modelName: "claude-3-5-haiku-20241022",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 10,
   },
   "claude-3-5-sonnet": {
     modelName: "claude-3-5-sonnet-20241022",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 1,
   },
   "claude-3-opus": {
     modelName: "claude-3-opus-20240229",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 0.1,
   },
   "uncensored": {
     modelName: "uncensored-small-32k-20240717",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 9.9,
   },
   "gpt-4o_guo": {
@@ -154,12 +159,12 @@ export const llmsConfig = {
   },
   "deepseek-chat_guo": {
     modelName: "deepseek-chat",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 5,
   },
   "deepseek-reasoner_guo": {
     modelName: "deepseek-reasoner",
-    endpoint: openai,
+    endpoint: openai_goapi,
     convertationEnergy: 2.5,
   },
   "o3-mini": {
@@ -248,7 +253,7 @@ export const tryCompletionsConfig = {
   "claude-3-opus": [
     "claude-3-opus",
     "claude-3-5-sonnet",
-    "claude-3-haiku",
+    "claude-3-5-haiku",
     "gpt-4o-plus",
     "gpt-4o",
     "o1-mini_GOAPI",
@@ -263,7 +268,7 @@ export const tryCompletionsConfig = {
   ],
   "claude-3-5-sonnet": [
     "claude-3-5-sonnet",
-    "claude-3-haiku",
+    "claude-3-5-haiku",
     "gpt-4o-plus",
     "gpt-4o",
     "o1-mini_GOAPI",
@@ -276,8 +281,8 @@ export const tryCompletionsConfig = {
     "gpt-3.5-turbo_guo",
     "gpt-3.5-turbo-0125_guo",
   ],
-  "claude-3-haiku": [
-    "claude-3-haiku",
+  "claude-3-5-haiku": [
+    "claude-3-5-haiku",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
     "gpt-auto",
@@ -312,6 +317,7 @@ export const tryCompletionsConfig = {
     "gpt-3.5-turbo-0125_guo",
   ],
   "o3-mini": [
+    "o3-mini_GOAPI",
     "o3-mini",
     "o1-mini_GOAPI",
     "o1-mini",
