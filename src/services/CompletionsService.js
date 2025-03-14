@@ -6,49 +6,137 @@ export class CompletionsService {
         this.tokensRepository = tokensRepository;
     }
 
-    // Функция для корректной обработки истории диалога
-    processDialogHistory(messages) {
-        const processedMessages = [];
-        let currentRole = null;
-        let currentContent = [];
+    // Функция для преобразования контента сообщения в строку
+    processMessageContent(content) {
+        if (typeof content === 'string') {
+            return content;
+        }
+        if (Array.isArray(content)) {
+            // Собираем только текстовые части из массива контента
+            return content
+                .filter(item => item.type === 'text')
+                .map(item => item.text)
+                .join('\n');
+        }
+        return '';
+    }
 
-        // Проходим по всем сообщениям
+    // Функция для обеспечения правильного чередования сообщений
+    ensureCorrectMessageOrder(messages) {
+        const result = [];
+        let lastRole = null;
+
         for (const message of messages) {
-            // Если роль изменилась или это первое сообщение
-            if (message.role !== currentRole) {
-                // Если есть накопленное содержимое, добавляем его
-                if (currentRole && currentContent.length > 0) {
-                    processedMessages.push({
-                        role: currentRole,
-                        content: currentContent.join('\n')
+            // Если это первое сообщение
+            if (lastRole === null) {
+                result.push(message);
+                lastRole = message.role;
+                continue;
+            }
+
+            // Если роли повторяются, добавляем промежуточное сообщение
+            if (message.role === lastRole) {
+                if (lastRole === 'user') {
+                    result.push({
+                        role: 'assistant',
+                        content: 'Понятно, продолжайте.'
+                    });
+                } else {
+                    result.push({
+                        role: 'user',
+                        content: 'Продолжай.'
                     });
                 }
-                // Начинаем новое накопление
-                currentRole = message.role;
-                currentContent = [message.content];
-            } else {
-                // Добавляем содержимое к текущему накоплению
-                currentContent.push(message.content);
             }
+
+            result.push(message);
+            lastRole = message.role;
         }
 
-        // Добавляем последнее накопленное сообщение
-        if (currentRole && currentContent.length > 0) {
-            processedMessages.push({
-                role: currentRole,
-                content: currentContent.join('\n')
-            });
-        }
-
-        // Если последнее сообщение от ассистента, добавляем пустой запрос пользователя
-        if (processedMessages.length > 0 && processedMessages[processedMessages.length - 1].role === 'assistant') {
-            processedMessages.push({
+        // Если последнее сообщение от ассистента, добавляем сообщение пользователя
+        if (result.length > 0 && result[result.length - 1].role === 'assistant') {
+            result.push({
                 role: 'user',
                 content: 'Продолжай'
             });
         }
 
-        return processedMessages;
+        return result;
+    }
+
+    // Функция для корректной обработки истории диалога
+    processDialogHistory(messages) {
+        const processedMessages = [];
+        
+        // Проходим по всем сообщениям и разбиваем их по строкам
+        for (const message of messages) {
+            const content = this.processMessageContent(message.content);
+            
+            // Разбиваем контент на строки
+            const lines = content.split('\n').filter(line => line.trim());
+            
+            let currentMessage = {
+                role: message.role,
+                content: []
+            };
+
+            // Проходим по каждой строке
+            for (const line of lines) {
+                // Если строка похожа на ответ ассистента (начинается с типичных маркеров)
+                if (line.startsWith('**') || 
+                    line.startsWith('Отвечаю как') || 
+                    line.startsWith('I\'ll answer as') ||
+                    line.startsWith('Я отвечу как')) {
+                    
+                    // Если у текущего сообщения есть контент, сохраняем его
+                    if (currentMessage.content.length > 0) {
+                        processedMessages.push({
+                            role: currentMessage.role,
+                            content: currentMessage.content.join('\n')
+                        });
+                        currentMessage.content = [];
+                    }
+                    
+                    // Меняем роль на assistant
+                    currentMessage.role = 'assistant';
+                    currentMessage.content.push(line);
+                }
+                // Если это похоже на новый вопрос пользователя
+                else if (line.endsWith('?') || 
+                        line.toLowerCase().includes('что') || 
+                        line.toLowerCase().includes('как') || 
+                        line.toLowerCase().includes('почему')) {
+                    
+                    // Если у текущего сообщения есть контент, сохраняем его
+                    if (currentMessage.content.length > 0) {
+                        processedMessages.push({
+                            role: currentMessage.role,
+                            content: currentMessage.content.join('\n')
+                        });
+                        currentMessage.content = [];
+                    }
+                    
+                    // Меняем роль на user
+                    currentMessage.role = 'user';
+                    currentMessage.content.push(line);
+                }
+                else {
+                    // Добавляем строку к текущему сообщению
+                    currentMessage.content.push(line);
+                }
+            }
+            
+            // Сохраняем последнее сообщение, если в нем есть контент
+            if (currentMessage.content.length > 0) {
+                processedMessages.push({
+                    role: currentMessage.role,
+                    content: currentMessage.content.join('\n')
+                });
+            }
+        }
+
+        // Обеспечиваем правильное чередование и последнее сообщение от пользователя
+        return this.ensureCorrectMessageOrder(processedMessages);
     }
 
     async updateCompletionTokens(tokenId, energy, operation) {
@@ -74,7 +162,9 @@ export class CompletionsService {
     async tryEndpoints(params, endpoints) {
         for await (const endpoint of endpoints) {
             try {
-                console.log(`[обращение к модели нейросети "${llmsConfig[endpoint].modelName}", сообщение: "${params.messages[params.messages.length-1].content}"]`);
+                const lastMessage = params.messages[params.messages.length-1];
+                console.log(`[обращение к модели нейросети "${llmsConfig[endpoint].modelName}", сообщение:`, JSON.stringify(lastMessage.content, null, 2), ']');
+                
                 const completionEndpoint = llmsConfig[endpoint].endpoint;
                 const model = llmsConfig[endpoint].modelName;
                 
@@ -82,14 +172,21 @@ export class CompletionsService {
                 let processedParams = {...params};
                 if (model === 'deepseek-reasoner') {
                     processedParams.messages = this.processDialogHistory(params.messages);
+                    console.log('[История сообщений для deepseek-reasoner]:', JSON.stringify(processedParams.messages, null, 2));
                 }
                 
-                return await completionEndpoint.chat.completions.create({
+                const response = await completionEndpoint.chat.completions.create({
                     ...processedParams,
                     model
                 });
+
+                console.log('[Ответ от модели]:', JSON.stringify(response.choices[0].message, null, 2));
+                return response;
             } catch (e) {
-                console.log(`[Ошибка обращение к нейросети "${llmsConfig[endpoint].modelName}": "${e.message}"]`);
+                console.log(`[Ошибка обращение к нейросети "${llmsConfig[endpoint].modelName}":`, JSON.stringify(e.message, null, 2), ']');
+                if (e.response && e.response.data) {
+                    console.log('[Детали ошибки]:', JSON.stringify(e.response.data, null, 2));
+                }
             }
         }
     }
