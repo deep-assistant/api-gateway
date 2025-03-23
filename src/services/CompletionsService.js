@@ -180,7 +180,8 @@ export class CompletionsService {
                     model
                 });
 
-                console.log('[Ответ от модели]:', JSON.stringify(response.choices[0].message, null, 2));
+                console.log(response)
+
                 return response;
             } catch (e) {
                 console.log(`[Ошибка обращение к нейросети "${llmsConfig[endpoint].modelName}":`, JSON.stringify(e.message, null, 2), ']');
