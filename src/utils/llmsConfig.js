@@ -30,6 +30,14 @@ const deepseek = new OpenAI({
   baseURL: process.env.DEEPSEEK_BASE_URL,
 });
 
+const openrouter = new OpenAI({
+  timeout: 180 * 1000,
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: process.env.OPENROUTER_BASE_URL,
+});
+
+
+
 export const llmsConfig = {
   "meta-llama/Meta-Llama-3.1-8B": {
     modelName: "meta-llama/Meta-Llama-3.1-8B-Instruct",
@@ -176,6 +184,11 @@ export const llmsConfig = {
     endpoint: openai_goapi,
     convertationEnergy: 5,
   },
+  "deepseek-chat_openrouter": {
+    modelName: "deepseek/deepseek-chat-v3-0324:free",
+    endpoint: openrouter,
+    convertationEnergy: 5,
+  },
   "deepseek-reasoner": {
     modelName: "deepseek-reasoner",
     endpoint: deepseek,
@@ -199,6 +212,7 @@ export const tryCompletionsConfig = {
     "gpt-4o_go",
     "gpt-4o",
     "gpt-4o_guo",
+    "deepseek-chat_openrouter",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
     "gpt-auto",
@@ -219,6 +233,7 @@ export const tryCompletionsConfig = {
     "gpt-4o_go",
     "gpt-4o",
     "gpt-4o_guo",
+    "deepseek-chat_openrouter",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
     "gpt-auto",
@@ -237,6 +252,7 @@ export const tryCompletionsConfig = {
     "gpt-4o_go",
     "gpt-4o",
     "gpt-4o_guo",
+    "deepseek-chat_openrouter",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
     "gpt-auto",
@@ -249,6 +265,7 @@ export const tryCompletionsConfig = {
     "gpt-4o_go",
     "gpt-4o",
     "gpt-4o_guo",
+    "deepseek-chat_openrouter",
     "gpt-4o-mini_go",
     "gpt-4o-mini",
     "gpt-auto",
@@ -261,6 +278,7 @@ export const tryCompletionsConfig = {
     "gpt-4o-mini_go",
     "gpt-4o-mini",
     "gpt-auto",
+    "deepseek-chat_openrouter",
     "gpt-3.5-turbo_go",
     "gpt-3.5-turbo",
     "gpt-3.5-turbo_guo",
@@ -331,8 +349,9 @@ export const tryCompletionsConfig = {
     "gpt-3.5-turbo-0125_guo",
   ],
   "deepseek-chat": [
-    "deepseek-chat",
     "deepseek-chat_go",
+    "deepseek-chat",
+    "deepseek-chat_openrouter",
     "gpt-4o_go",
     "gpt-4o",
     "gpt-4o_guo",
@@ -347,6 +366,7 @@ export const tryCompletionsConfig = {
   "deepseek-reasoner": [
     "deepseek-reasoner",
     "deepseek-reasoner_go",
+    "deepseek-chat_openrouter",
     "deepseek-chat",
     "deepseek-chat_go",
     "o3-mini_go",
