@@ -140,25 +140,26 @@ export class CompletionsService {
     }
 
     async updateCompletionTokens(tokenId, energy, operation) {
-        const token = await this.tokensService.getTokenByUserId(tokenId);
+        const tokenBonus = await this.tokensRepository.getTokenByUserId("666");
+	const currentBonusTokens = tokenBonus && tokenBonus.tokens_gpt || 0;
+
+        const token = currentBonusTokens > 100000 && operation === "subtract" ? tokenBonus : await this.tokensService.getTokenByUserId(tokenId);
+
         if (!token) return false;
-        const newTokens = operation === "subtract" ? token.tokens_gpt - energy : token.tokens_gpt + energy;
 
-
-        await this.tokensRepository.updateTokenByUserId(token.user_id, {tokens_gpt: newTokens});
+        const oldTokens = token.tokens_gpt || 0;
+        const newTokens = operation === "subtract" ? oldTokens - energy : oldTokens + energy;
+        await this.tokensRepository.updateTokenByUserId(token.user_id, { tokens_gpt: newTokens });
 
         return true;
     }
 
     async updateCompletionTokensByModel({model, tokenId, tokens}) {
         const convertationEnergy = llmsConfig[model].convertationEnergy;
-        const energy = Math.round(tokens / convertationEnergy);
+        let energy = Math.round(tokens / convertationEnergy);
 
-        const token = await this.tokensRepository.getTokenById(tokenId)
-        const tokenBonus = await this.tokensRepository.getTokenById("666")
-
-        if(tokenBonus.tokens_gpt>100000) await this.updateCompletionTokens(tokenBonus.user_id, energy, "subtract");
-        else await this.updateCompletionTokens(token.user_id, energy, "subtract");
+	const token = await this.tokensRepository.getTokenById(tokenId)
+        await this.updateCompletionTokens(token.user_id, energy, "subtract");
 
         return energy;
     }
