@@ -140,11 +140,19 @@ export class CompletionsService {
     }
 
     async updateCompletionTokens(tokenId, energy, operation) {
+        console.log('updateCompletionTokens', 'energy', energy);
+
+	if (!energy) return false;
+
+        console.log('updateCompletionTokens', 'operation', operation);
+
+	if (operation !== "subtract" && operation !== "add") return false;
+
         const tokenBonus = await this.tokensRepository.getTokenByUserId("666");
 
 	console.log('updateCompletionTokens', 'tokenBonus', tokenBonus);
 
-	const currentBonusTokens = tokenBonus && tokenBonus.tokens_gpt || 0;
+	const currentBonusTokens = tokenBonus && +tokenBonus.tokens_gpt || 0;
 
         console.log('updateCompletionTokens', 'currentBonusTokens', currentBonusTokens);
 
@@ -154,15 +162,19 @@ export class CompletionsService {
 
         if (!token) return false;
 
-        const oldTokens = token.tokens_gpt || 0;
+        const oldEnergy = +token.tokens_gpt || 0;
 
-	console.log('updateCompletionTokens', 'oldTokens', oldTokens);
+	console.log('updateCompletionTokens', 'oldEnergy', oldEnergy);
 
-        const newTokens = operation === "subtract" ? oldTokens - energy : oldTokens + energy;
+	const energyToSpend = +energy || 0;
 
-	console.log('updateCompletionTokens', 'newTokens', newTokens);
+	console.log('updateCompletionTokens', 'energyToSpend', energyToSpend);
 
-	await this.tokensRepository.updateTokenByUserId(token.user_id, { tokens_gpt: newTokens });
+        const newEnergy = operation === "add" ? oldEnergy + energyToSpend : oldEnergy - energyToSpend;
+
+	console.log('updateCompletionTokens', 'newEnergy', newEnergy);
+
+	await this.tokensRepository.updateTokenByUserId(token.user_id, { tokens_gpt: newEnergy });
 
         return true;
     }
