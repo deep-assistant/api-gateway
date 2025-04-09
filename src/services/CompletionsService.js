@@ -141,15 +141,28 @@ export class CompletionsService {
 
     async updateCompletionTokens(tokenId, energy, operation) {
         const tokenBonus = await this.tokensRepository.getTokenByUserId("666");
+
+	console.log('updateCompletionTokens', 'tokenBonus', tokenBonus);
+
 	const currentBonusTokens = tokenBonus && tokenBonus.tokens_gpt || 0;
 
+        console.log('updateCompletionTokens', 'currentBonusTokens', currentBonusTokens);
+
         const token = currentBonusTokens > 100000 && operation === "subtract" ? tokenBonus : await this.tokensService.getTokenByUserId(tokenId);
+
+	console.log('updateCompletionTokens', 'token', token);
 
         if (!token) return false;
 
         const oldTokens = token.tokens_gpt || 0;
+
+	console.log('updateCompletionTokens', 'oldTokens', oldTokens);
+
         const newTokens = operation === "subtract" ? oldTokens - energy : oldTokens + energy;
-        await this.tokensRepository.updateTokenByUserId(token.user_id, { tokens_gpt: newTokens });
+
+	console.log('updateCompletionTokens', 'newTokens', newTokens);
+
+	await this.tokensRepository.updateTokenByUserId(token.user_id, { tokens_gpt: newTokens });
 
         return true;
     }
