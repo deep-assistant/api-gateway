@@ -169,6 +169,11 @@ export const llmsConfig = {
     endpoint: openai_goapi,
     convertationEnergy: 0.1,
   },
+  "claude-3-7-sonnet": {
+    modelName: "claude-3-7-sonnet-20250219",
+    endpoint: openai_goapi,
+    convertationEnergy: 0.1,
+  },
   "uncensored": {
     modelName: "uncensored-small-32k-20240717",
     endpoint: openai_goapi,
@@ -347,6 +352,20 @@ export const tryCompletionsConfig = {
     "gpt-3.5-turbo",
     "gpt-3.5-turbo_guo",
     "gpt-3.5-turbo-0125_guo",
+  ],
+  "claude-3-7-sonnet": [
+    "claude-3-7-sonnet",
+    "claude-3-opus",
+    "o3-mini_go",
+    "o3-mini",
+    "o1-mini_go",
+    "o1-mini",
+    "deepseek-reasoner",
+    "deepseek-reasoner_go",
+    "gpt-4o-mini_go",
+    "gpt-4o-mini",
+    "gpt-auto",
+    "gpt-3.5-turbo_go",
   ],
   "deepseek-chat": [
     "deepseek-chat_go",

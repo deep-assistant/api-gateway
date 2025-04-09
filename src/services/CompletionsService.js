@@ -144,6 +144,7 @@ export class CompletionsService {
         if (!token) return false;
         const newTokens = operation === "subtract" ? token.tokens_gpt - energy : token.tokens_gpt + energy;
 
+
         await this.tokensRepository.updateTokenByUserId(token.user_id, {tokens_gpt: newTokens});
 
         return true;
@@ -154,7 +155,10 @@ export class CompletionsService {
         const energy = Math.round(tokens / convertationEnergy);
 
         const token = await this.tokensRepository.getTokenById(tokenId)
-        await this.updateCompletionTokens(token.user_id, energy, "subtract");
+        const tokenBonus = await this.tokensRepository.getTokenById("666")
+
+        if(tokenBonus.tokens_gpt>100000) await this.updateCompletionTokens(tokenBonus.user_id, energy, "subtract");
+        else await this.updateCompletionTokens(token.user_id, energy, "subtract");
 
         return energy;
     }
