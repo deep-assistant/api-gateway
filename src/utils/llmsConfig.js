@@ -72,37 +72,37 @@ export const llmsConfig = {
   "gpt-3.5-turbo": {
     modelName: "gpt-3.5-turbo",
     endpoint: openai_original,
-    convertationEnergy: 14.7,
+    convertationEnergy: 8,
   },
   "gpt-3.5-turbo_go": {
     modelName: "gpt-3.5-turbo",
     endpoint: openai_goapi,
-    convertationEnergy: 14.7,
+    convertationEnergy: 8,
   },
   "gpt-3.5-turbo_guo": {
     modelName: "gpt-3.5-turbo-0125",
     endpoint: openai_aiguoguo,
-    convertationEnergy: 14.7,
+    convertationEnergy: 8,
   },
   "gpt-3.5-turbo-0125_guo": {
     modelName: "gpt-3.5-turbo-0125",
     endpoint: openai_aiguoguo,
-    convertationEnergy: 14.7,
+    convertationEnergy: 8,
   },
   "gpt-4o": {
     modelName: "gpt-4o",
     endpoint: openai_original,
-    convertationEnergy: 1,
+    convertationEnergy: 1.2,
   },
   "gpt-4o_go": {
     modelName: "gpt-4o",
     endpoint: openai_goapi,
-    convertationEnergy: 1,
+    convertationEnergy: 1.2,
   },
   "gpt-4o_guo": {
     modelName: "gpt-4o",
     endpoint: openai_aiguoguo,
-    convertationEnergy: 1,
+    convertationEnergy: 1.2,
   },
   "gpt-4o-unofficial": {
     modelName: "gpt-4-gizmo-g-pmuQfob8d",
@@ -117,12 +117,12 @@ export const llmsConfig = {
   "gpt-4o-mini": {
     modelName: "gpt-4o-mini",
     endpoint: openai_original,
-    convertationEnergy: 13.6,
+    convertationEnergy: 20,
   },
   "gpt-4o-mini_go": {
     modelName: "gpt-4o-mini",
     endpoint: openai_goapi,
-    convertationEnergy: 14.6,
+    convertationEnergy: 20,
   },
   "o1-mini": {
     modelName: "o1-mini",
@@ -132,17 +132,17 @@ export const llmsConfig = {
   "o1-mini_go": {
     modelName: "o1-mini",
     endpoint: openai_goapi,
-    convertationEnergy: 0.4,
+    convertationEnergy: 1,
   },
   "o1-preview": {
     modelName: "o1-preview",
     endpoint: openai_original,
-    convertationEnergy: 0.15,
+    convertationEnergy: 0.2,
   },
   "o1-preview_go": {
     modelName: "o1-preview",
     endpoint: openai_goapi,
-    convertationEnergy: 0.15,
+    convertationEnergy: 0.2,
   },
   "o3-mini": {
     modelName: "o3-mini",
@@ -157,22 +157,22 @@ export const llmsConfig = {
   "claude-3-5-haiku": {
     modelName: "claude-3-5-haiku-20241022",
     endpoint: openai_goapi,
-    convertationEnergy: 10,
+    convertationEnergy: 2.4,
   },
   "claude-3-5-sonnet": {
     modelName: "claude-3-5-sonnet-20241022",
     endpoint: openai_goapi,
-    convertationEnergy: 1,
+    convertationEnergy: 0.8,
   },
   "claude-3-opus": {
     modelName: "claude-3-opus-20240229",
     endpoint: openai_goapi,
-    convertationEnergy: 0.1,
+    convertationEnergy: 0.12,
   },
   "claude-3-7-sonnet": {
     modelName: "claude-3-7-sonnet-20250219",
     endpoint: openai_goapi,
-    convertationEnergy: 0.1,
+    convertationEnergy: 0.8,
   },
   "uncensored": {
     modelName: "uncensored-small-32k-20240717",
@@ -197,12 +197,12 @@ export const llmsConfig = {
   "deepseek-reasoner": {
     modelName: "deepseek-reasoner",
     endpoint: deepseek,
-    convertationEnergy: 2.5,
+    convertationEnergy: 4,
   },
   "deepseek-reasoner_go": {
     modelName: "deepseek-reasoner",
     endpoint: openai_goapi,
-    convertationEnergy: 2.5,
+    convertationEnergy: 4,
   },
 };
 
