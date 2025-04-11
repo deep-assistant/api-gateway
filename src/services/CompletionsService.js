@@ -179,11 +179,24 @@ export class CompletionsService {
         return true;
     }
 
-    async updateCompletionTokensByModel({model, tokenId, tokens}) {
-        const convertationEnergy = llmsConfig[model].convertationEnergy;
-        let energy = Math.round(tokens / convertationEnergy);
+    async updateCompletionTokensByModel({ model, tokenId, tokens }) {
+        console.log('updateCompletionTokensByModel', 'arguments', { model, tokenId, tokens });
 
-	const token = await this.tokensRepository.getTokenById(tokenId)
+	const convertationEnergy = llmsConfig[model].convertationEnergy;
+	console.log('updateCompletionTokensByModel', 'convertationEnergy', convertationEnergy);
+
+        let energy = Math.round(tokens / convertationEnergy);
+	console.log('updateCompletionTokensByModel', 'energy before profit margin', energy);
+
+	let defaultProfitMargin = 0.5;
+        console.log('updateCompletionTokensByModel', 'profit margin', defaultProfitMargin);
+
+	energy *= (1 + defaultProfitMargin);
+	console.log('updateCompletionTokensByModel', 'energy after profit margin', energy);
+
+	const token = await this.tokensRepository.getTokenById(tokenId);
+	console.log('updateCompletionTokensByModel', 'token', token);
+
         await this.updateCompletionTokens(token.user_id, energy, "subtract");
 
         return energy;
