@@ -33,7 +33,7 @@ speechController.post(
         }
 
         // Расчет токенов (на основе длины текста)
-        const tokenCost = Math.ceil(input.length * 0.5); // 1 токен за 10 символов
+        const tokenCost = Math.ceil(input.length * 0.5); // 1 токен за 2 символа
         console.log(`[TTS: Предполагаемый расход токенов - ${tokenCost}]`);
 
         // Параметры для API GoAPI
