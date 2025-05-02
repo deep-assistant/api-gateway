@@ -8,8 +8,9 @@ import completionsController from "./controllers/completionsController.js";
 import tokensController from "./controllers/tokensController.js";
 import systemMessagesController from "./controllers/systemMessagesController.js";
 import referralController from "./controllers/referralController.js";
-import transcriptionsController from "./controllers/transcriptionsController.js";
 import dialogsController from "./controllers/dialogsController.js";
+import transcriptionsController from "./controllers/transcriptionsController.js";
+import speechController from "./controllers/speechController.js";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -23,6 +24,7 @@ app.use("/", tokensController);
 app.use("/", systemMessagesController);
 app.use("/", referralController);
 app.use("/", transcriptionsController);
+app.use("/", speechController);
 app.use("/", dialogsController);
 
 app.listen(PORT, () => {
