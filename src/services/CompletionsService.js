@@ -204,11 +204,25 @@ export class CompletionsService {
 
     async tryEndpoints(params, endpoints) {
         const errors = [];
+        const requestId = Math.random().toString(36).substring(2, 15);
         
-        for await (const endpoint of endpoints) {
+        console.log(`[${requestId}] 🚀 Начинаем попытки подключения к провайдерам для модели ${params.model}`);
+        console.log(`[${requestId}] 📋 Доступные эндпоинты:`, endpoints.map(endpoint => llmsConfig[endpoint]?.modelName || endpoint));
+        
+        for (let i = 0; i < endpoints.length; i++) {
+            const endpoint = endpoints[i];
+            const providerName = llmsConfig[endpoint]?.providerName || 'Unknown';
+            const modelName = llmsConfig[endpoint]?.modelName || endpoint;
+            
+            console.log(`\n[${requestId}] 🔄 Попытка ${i + 1}/${endpoints.length}: ${providerName} (${modelName})`);
+            
             try {
                 const lastMessage = params.messages[params.messages.length-1];
-                console.log(`[обращение к модели нейросети "${llmsConfig[endpoint].modelName}", сообщение:`, JSON.stringify(lastMessage.content, null, 2), ']');
+                const messagePreview = typeof lastMessage.content === 'string' 
+                    ? lastMessage.content.substring(0, 100) + (lastMessage.content.length > 100 ? '...' : '')
+                    : JSON.stringify(lastMessage.content).substring(0, 100) + '...';
+                
+                console.log(`[${requestId}] 💬 Сообщение пользователя: "${messagePreview}"`);
                 
                 const completionEndpoint = llmsConfig[endpoint].endpoint;
                 const model = llmsConfig[endpoint].modelName;
@@ -217,23 +231,45 @@ export class CompletionsService {
                 let processedParams = {...params};
                 if (model === 'deepseek-reasoner') {
                     processedParams.messages = this.processDialogHistory(params.messages);
-                    console.log('[История сообщений для deepseek-reasoner]:', JSON.stringify(processedParams.messages, null, 2));
+                    console.log(`[${requestId}] 🔧 Применена специальная обработка для deepseek-reasoner`);
                 }
                 
                 // Логируем параметры перед запросом
-                console.log(`[Запрос к ${llmsConfig[endpoint].modelName}]:`, {
-                    model,
+                console.log(`[${requestId}] 📤 Отправляем запрос к ${providerName}:`, {
+                    provider: providerName,
+                    model: modelName,
                     messagesCount: processedParams.messages.length,
-                    stream: processedParams.stream
+                    stream: processedParams.stream,
+                    timestamp: new Date().toISOString()
                 });
+                
+                const startTime = Date.now();
                 let response;
+                
                 try {
                     response = await completionEndpoint.chat.completions.create({
                         ...processedParams,
                         model
                     });
+                    
+                    const responseTime = Date.now() - startTime;
+                    console.log(`[${requestId}] ✅ Успешный ответ от ${providerName} за ${responseTime}ms`);
+                    
                 } catch (err) {
-                    console.log(`[Ошибка запроса к ${llmsConfig[endpoint].modelName}]:`, err.message);
+                    const responseTime = Date.now() - startTime;
+                    console.log(`[${requestId}] ❌ Ошибка от ${providerName} за ${responseTime}ms:`, err.message);
+                    
+                    // Детализация ошибок по типам
+                    if (err.message.includes('429')) {
+                        console.log(`[${requestId}] ⚠️  Превышен лимит запросов (429) у ${providerName}`);
+                    } else if (err.message.includes('401')) {
+                        console.log(`[${requestId}] 🔑 Проблема с API ключом (401) у ${providerName}`);
+                    } else if (err.message.includes('503')) {
+                        console.log(`[${requestId}] 🔧 Сервис недоступен (503) у ${providerName}`);
+                    } else if (err.message.includes('500')) {
+                        console.log(`[${requestId}] 🛠️  Внутренняя ошибка сервера (500) у ${providerName}`);
+                    }
+                    
                     throw err;
                 }
 
@@ -241,52 +277,70 @@ export class CompletionsService {
                 if (typeof response === 'string') {
                     try {
                         response = JSON.parse(response);
-                        console.log(`[Ответ от ${llmsConfig[endpoint].modelName}]:`, {
-                            id: response.id,
-                            model: response.model,
-                            hasUsage: !!response.usage,
-                            totalTokens: response.usage?.total_tokens,
-                            hasChoices: !!response.choices,
-                            choicesCount: response.choices?.length
-                        });
+                        console.log(`[${requestId}] 🔄 Ответ от ${providerName} был строкой, успешно распарсен`);
                     } catch (e) {
-                        console.log(`[Ошибка парсинга ответа от ${llmsConfig[endpoint].modelName}]:`, e.message);
-                        throw new Error(`Не удалось распарсить ответ от ${llmsConfig[endpoint].modelName}`);
+                        console.log(`[${requestId}] ❌ Ошибка парсинга ответа от ${providerName}:`, e.message);
+                        throw new Error(`Не удалось распарсить ответ от ${providerName}`);
                     }
-                } else {
-                    console.log(`[Ответ от ${llmsConfig[endpoint].modelName}]:`, {
-                        id: response.id,
-                        model: response.model,
-                        hasUsage: !!response.usage,
-                        totalTokens: response.usage?.total_tokens,
-                        hasChoices: !!response.choices,
-                        choicesCount: response.choices?.length
-                    });
                 }
 
+                // Детальное логирование успешного ответа
+                console.log(`[${requestId}] 📥 Детали ответа от ${providerName}:`, {
+                    provider: providerName,
+                    model: response.model,
+                    responseId: response.id,
+                    hasUsage: !!response.usage,
+                    totalTokens: response.usage?.total_tokens || 'N/A',
+                    promptTokens: response.usage?.prompt_tokens || 'N/A',
+                    completionTokens: response.usage?.completion_tokens || 'N/A',
+                    hasChoices: !!response.choices,
+                    choicesCount: response.choices?.length || 0,
+                    finishReason: response.choices?.[0]?.finish_reason || 'N/A',
+                    responseTime: `${Date.now() - startTime}ms`
+                });
+
+                if (response.choices?.[0]?.message?.content) {
+                    const contentPreview = response.choices[0].message.content.substring(0, 150) + 
+                        (response.choices[0].message.content.length > 150 ? '...' : '');
+                    console.log(`[${requestId}] 🤖 Ответ ИИ: "${contentPreview}"`);
+                }
+
+                console.log(`[${requestId}] 🎉 Успешно получили ответ от ${providerName}`);
                 return response;
+                
             } catch (e) {
-                const errorMsg = `Ошибка обращения к нейросети "${llmsConfig[endpoint].modelName}": ${e.message}`;
-                console.log(`[${errorMsg}]`);
+                const errorMsg = `Ошибка обращения к нейросети "${llmsConfig[endpoint]?.modelName || endpoint}": ${e.message}`;
+                console.log(`[${requestId}] ❌ ${errorMsg}`);
                 errors.push(errorMsg);
                 
                 if (e.response && e.response.data) {
-                    console.log('[Детали ошибки]:', JSON.stringify(e.response.data, null, 2));
+                    console.log(`[${requestId}] 📋 Детали ошибки от ${providerName}:`, JSON.stringify(e.response.data, null, 2));
                 }
             }
         }
         
-        // Если все эндпоинты завершились с ошибкой, выбрасываем исключение
+        // Если все эндпоинты завершились с ошибкой
+        console.log(`\n[${requestId}] 💥 Все ${endpoints.length} провайдеров недоступны:`);
+        errors.forEach((error, index) => {
+            console.log(`[${requestId}]   ${index + 1}. ${error}`);
+        });
+        
         throw new Error(`Все доступные эндпоинты недоступны. Ошибки: ${errors.join('; ')}`);
     }
 
     async completions(params) {
+        const requestId = Math.random().toString(36).substring(2, 15);
         const modelsChain = tryCompletionsConfig[params.model];
 
+        console.log(`\n[${requestId}] 🎯 Начинаем обработку запроса к модели ${params.model}`);
+        console.log(`[${requestId}] 🔗 Цепочка моделей:`, modelsChain || [params.model, `${params.model}_guo`, "gpt-auto"]);
+
         try {
-            return await this.tryEndpoints(params, modelsChain || [params.model, `${params.model}_guo`, "gpt-auto"]);
+            const result = await this.tryEndpoints(params, modelsChain || [params.model, `${params.model}_guo`, "gpt-auto"]);
+            console.log(`[${requestId}] ✅ Запрос успешно обработан моделью ${params.model}`);
+            return result;
         } catch (error) {
-            console.error(`[Ошибка в completions для модели ${params.model}]:`, error.message);
+            console.error(`[${requestId}] 💥 Ошибка в completions для модели ${params.model}:`, error.message);
             throw error;
         }
     }

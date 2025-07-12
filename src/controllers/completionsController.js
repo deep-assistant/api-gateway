@@ -30,14 +30,32 @@ completionsController.post(
 
                 if (!completion || !completion.usage) {
                     console.error(`[ Ошибка: completion или completion.usage не определены для модели ${model} ]`);
-                    return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+                    return new HttpResponse(500, { 
+                        error: "Сервис нейросети временно недоступен. Попробуйте позже или выберите другую модель.",
+                        message: "Сервис нейросети временно недоступен. Попробуйте позже или выберите другую модель.",
+                        status: "error"
+                    });
                 }
 
                 const tokens = completion.usage.total_tokens;
                 await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
             } catch (error) {
                 console.error(`[ Ошибка при выполнении потоковой модели ${model} ]:`, error.message);
-                return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+                
+                // Формируем понятное сообщение об ошибке для пользователя
+                let userMessage = "Сервис нейросети временно недоступен. Попробуйте позже.";
+                
+                if (error.message.includes("Все доступные эндпоинты недоступны")) {
+                    userMessage = "Модель временно недоступна. Попробуйте позже.";
+                } else if (error.message.includes("quota") || error.message.includes("квота")) {
+                    userMessage = "Превышен лимит запросов к нейросети. Попробуйте позже.";
+                } else if (error.message.includes("expired") || error.message.includes("истек")) {
+                    userMessage = "Проблема с доступом к нейросети. Обратитесь к администратору.";
+                } else if (error.message.includes("resource") || error.message.includes("ресурс")) {
+                    userMessage = "Модель нейросети временно недоступна. Попробуйте другую модель.";
+                }
+                
+                return new HttpResponse(500, { error: userMessage });
             }
 
             return new SSEResponse(async () => {
@@ -98,7 +116,11 @@ completionsController.post(
                 
                 if (!completion || !completion.usage) {
                     console.error(`[ Ошибка: completion или completion.usage не определены для модели ${model} ]`);
-                    return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+                    return new HttpResponse(500, { 
+                        error: "Сервис нейросети временно недоступен. Попробуйте позже или выберите другую модель.",
+                        message: "Сервис нейросети временно недоступен. Попробуйте позже или выберите другую модель.",
+                        status: "error"
+                    });
                 }
                 
                 const tokens = completion.usage.total_tokens;
@@ -108,7 +130,21 @@ completionsController.post(
                 return new HttpResponse(200, completion);
             } catch (error) {
                 console.error(`[ Ошибка при выполнении модели ${model} ]:`, error.message);
-                return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+                
+                // Формируем понятное сообщение об ошибке для пользователя
+                let userMessage = "Сервис нейросети временно недоступен. Попробуйте позже.";
+                
+                if (error.message.includes("Все доступные эндпоинты недоступны")) {
+                    userMessage = "Модель временно недоступна. Попробуйте позже.";
+                } else if (error.message.includes("quota") || error.message.includes("квота")) {
+                    userMessage = "Превышен лимит запросов к нейросети. Попробуйте позже.";
+                } else if (error.message.includes("expired") || error.message.includes("истек")) {
+                    userMessage = "Проблема с доступом к нейросети. Обратитесь к администратору.";
+                } else if (error.message.includes("resource") || error.message.includes("ресурс")) {
+                    userMessage = "Модель нейросети временно недоступна. Попробуйте другую модель.";
+                }
+                
+                return new HttpResponse(500, { error: userMessage });
             }
         }
 
@@ -142,7 +178,25 @@ completionsController.post(
         });
         } catch (error) {
             console.error(`[ Ошибка при выполнении потоковой модели ${model} ]:`, error.message);
-            return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+            
+            // Формируем понятное сообщение об ошибке для пользователя
+            let userMessage = "Сервис нейросети временно недоступен. Попробуйте позже.";
+            
+            if (error.message.includes("Все доступные эндпоинты недоступны")) {
+                userMessage = "Модель временно недоступна. Попробуйте позже.";
+            } else if (error.message.includes("quota") || error.message.includes("квота")) {
+                userMessage = "Превышен лимит запросов к нейросети. Попробуйте позже.";
+            } else if (error.message.includes("expired") || error.message.includes("истек")) {
+                userMessage = "Проблема с доступом к нейросети. Обратитесь к администратору.";
+            } else if (error.message.includes("resource") || error.message.includes("ресурс")) {
+                userMessage = "Модель нейросети временно недоступна. Попробуйте другую модель.";
+            }
+            
+            return new HttpResponse(500, { 
+                error: userMessage,
+                message: userMessage,
+                status: "error"
+            });
         }
     })
 );
@@ -150,8 +204,10 @@ completionsController.post(
 completionsController.post(
     "/completions",
     rest(async ({req}) => {
+        const requestId = Math.random().toString(36).substring(2, 15);
+        
         await tokensService.isValidMasterToken(req.query.masterToken);
-        console.log(`[ POST /completions ]`);
+        console.log(`[${requestId}] 📨 POST /completions`);
 
         const body = req.body;
         const model = body.model;
@@ -159,35 +215,68 @@ completionsController.post(
         const systemMessage = body.systemMessage;
         const userId = body.userId;
  
-        console.log(`[ начало обработки для пользователя ${userId}, модель ${model} , запрос: "${content}"...`);
+        console.log(`[${requestId}] 👤 Пользователь ${userId} запрашивает модель ${model}`);
+        console.log(`[${requestId}] 💬 Сообщение: "${content.substring(0, 100)}${content.length > 100 ? '...' : ''}"`);
+        
         const token = await tokensService.getTokenByUserId(userId);
+        console.log(`[${requestId}] 🔑 Токен пользователя получен, ID: ${token.id}`);
 
         await dialogsService.addMessageToDialog(userId, content);
+        console.log(`[${requestId}] 💾 Сообщение добавлено в диалог`);
 
         const messages = await dialogsService.getDialogWithSystem(userId, systemMessage, model);
+        console.log(`[${requestId}] 📝 История диалога загружена, сообщений: ${messages.length}`);
 
         try {
             const completion = await completionsService.completions({stream: false, model, messages});
             
             if (!completion || !completion.usage) {
-                console.error(`[ Ошибка: completion или completion.usage не определены для модели ${model} ]`);
-                return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+                console.error(`[${requestId}] ❌ Ошибка: completion или completion.usage не определены для модели ${model}`);
+                return new HttpResponse(500, { 
+                    error: "Модель временно недоступна. Попробуйте позже или выберите другую модель.",
+                    message: "Модель временно недоступна. Попробуйте позже или выберите другую модель.",
+                    status: "error"
+                });
             }
             
             const tokens = completion.usage.total_tokens;
+            console.log(`[${requestId}] 🎯 Получен ответ от модели ${model}, токенов: ${tokens}`);
 
             await dialogsService.addMessageToDialog(userId, completion.choices[0].message.content);
+            console.log(`[${requestId}] 💾 Ответ ИИ добавлен в диалог`);
 
-        completion.usage.energy = await completionsService.updateCompletionTokensByModel({
-            model,
-            tokenId: token.id,
-            tokens,
-        });
-        console.log(`...завершение обработки для пользователя ${userId}, токены израсходованы: ${tokens} ]`);
-        return new HttpResponse(200, completion);
+            completion.usage.energy = await completionsService.updateCompletionTokensByModel({
+                model,
+                tokenId: token.id,
+                tokens,
+            });
+            
+            console.log(`[${requestId}] ✅ Запрос завершен успешно. Энергия: ${completion.usage.energy}`);
+            return new HttpResponse(200, completion);
+            
         } catch (error) {
-            console.error(`[ Ошибка при выполнении модели ${model} для пользователя ${userId} ]:`, error.message);
-            return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+            console.error(`[${requestId}] 💥 Ошибка при выполнении модели ${model} для пользователя ${userId}:`, error.message);
+            
+            // Формируем понятное сообщение об ошибке для пользователя
+            let userMessage = "Модель временно недоступна. Попробуйте позже.";
+            
+            if (error.message.includes("Все доступные эндпоинты недоступны")) {
+                userMessage = "Модель временно недоступна. Попробуйте позже.";
+            } else if (error.message.includes("quota") || error.message.includes("квота")) {
+                userMessage = "Превышен лимит запросов к нейросети. Попробуйте позже.";
+            } else if (error.message.includes("expired") || error.message.includes("истек")) {
+                userMessage = "Проблема с доступом к нейросети. Обратитесь к администратору.";
+            } else if (error.message.includes("resource") || error.message.includes("ресурс")) {
+                userMessage = "Модель нейросети временно недоступна. Попробуйте другую модель.";
+            }
+            
+            console.log(`[${requestId}] 📤 Отправляем пользователю сообщение об ошибке: "${userMessage}"`);
+            
+            return new HttpResponse(500, { 
+                error: userMessage,
+                message: userMessage,
+                status: "error"
+            });
         }
     }),
 );
