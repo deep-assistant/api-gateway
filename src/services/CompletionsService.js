@@ -203,6 +203,8 @@ export class CompletionsService {
     }
 
     async tryEndpoints(params, endpoints) {
+        const errors = [];
+        
         for await (const endpoint of endpoints) {
             try {
                 const lastMessage = params.messages[params.messages.length-1];
@@ -218,24 +220,74 @@ export class CompletionsService {
                     console.log('[История сообщений для deepseek-reasoner]:', JSON.stringify(processedParams.messages, null, 2));
                 }
                 
-                const response = await completionEndpoint.chat.completions.create({
-                    ...processedParams,
-                    model
+                // Логируем параметры перед запросом
+                console.log(`[Запрос к ${llmsConfig[endpoint].modelName}]:`, {
+                    model,
+                    messagesCount: processedParams.messages.length,
+                    stream: processedParams.stream
                 });
+                let response;
+                try {
+                    response = await completionEndpoint.chat.completions.create({
+                        ...processedParams,
+                        model
+                    });
+                } catch (err) {
+                    console.log(`[Ошибка запроса к ${llmsConfig[endpoint].modelName}]:`, err.message);
+                    throw err;
+                }
+
+                // Обрабатываем ответ - если приходит как строка, парсим в JSON
+                if (typeof response === 'string') {
+                    try {
+                        response = JSON.parse(response);
+                        console.log(`[Ответ от ${llmsConfig[endpoint].modelName}]:`, {
+                            id: response.id,
+                            model: response.model,
+                            hasUsage: !!response.usage,
+                            totalTokens: response.usage?.total_tokens,
+                            hasChoices: !!response.choices,
+                            choicesCount: response.choices?.length
+                        });
+                    } catch (e) {
+                        console.log(`[Ошибка парсинга ответа от ${llmsConfig[endpoint].modelName}]:`, e.message);
+                        throw new Error(`Не удалось распарсить ответ от ${llmsConfig[endpoint].modelName}`);
+                    }
+                } else {
+                    console.log(`[Ответ от ${llmsConfig[endpoint].modelName}]:`, {
+                        id: response.id,
+                        model: response.model,
+                        hasUsage: !!response.usage,
+                        totalTokens: response.usage?.total_tokens,
+                        hasChoices: !!response.choices,
+                        choicesCount: response.choices?.length
+                    });
+                }
 
                 return response;
             } catch (e) {
-                console.log(`[Ошибка обращение к нейросети "${llmsConfig[endpoint].modelName}":`, JSON.stringify(e.message, null, 2), ']');
+                const errorMsg = `Ошибка обращения к нейросети "${llmsConfig[endpoint].modelName}": ${e.message}`;
+                console.log(`[${errorMsg}]`);
+                errors.push(errorMsg);
+                
                 if (e.response && e.response.data) {
                     console.log('[Детали ошибки]:', JSON.stringify(e.response.data, null, 2));
                 }
             }
         }
+        
+        // Если все эндпоинты завершились с ошибкой, выбрасываем исключение
+        throw new Error(`Все доступные эндпоинты недоступны. Ошибки: ${errors.join('; ')}`);
     }
 
     async completions(params) {
         const modelsChain = tryCompletionsConfig[params.model];
 
-        return this.tryEndpoints(params, modelsChain || [params.model, `${params.model}_guo`, "gpt-auto"]);
+        try {
+            return await this.tryEndpoints(params, modelsChain || [params.model, `${params.model}_guo`, "gpt-auto"]);
+        } catch (error) {
+            console.error(`[Ошибка в completions для модели ${params.model}]:`, error.message);
+            throw error;
+        }
     }
 }

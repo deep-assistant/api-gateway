@@ -368,9 +368,9 @@ export const tryCompletionsConfig = {
     "gpt-3.5-turbo_go",
   ],
   "deepseek-chat": [
+    "deepseek-chat_openrouter",
     "deepseek-chat_go",
     "deepseek-chat",
-    "deepseek-chat_openrouter",
     "gpt-4o_go",
     "gpt-4o",
     "gpt-4o_guo",

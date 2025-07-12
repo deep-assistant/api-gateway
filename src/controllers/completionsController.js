@@ -24,10 +24,21 @@ completionsController.post(
 
         if ((model.startsWith("o1") || model.startsWith("claude")) && stream) {
             console.log(`[ выполнение потоковой модели ${model} ]`);
-            const completion = await completionsService.completions({ ...body, stream: false });
+            
+            try {
+                const completion = await completionsService.completions({ ...body, stream: false });
 
-            const tokens = completion.usage.total_tokens;
-            await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
+                if (!completion || !completion.usage) {
+                    console.error(`[ Ошибка: completion или completion.usage не определены для модели ${model} ]`);
+                    return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+                }
+
+                const tokens = completion.usage.total_tokens;
+                await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
+            } catch (error) {
+                console.error(`[ Ошибка при выполнении потоковой модели ${model} ]:`, error.message);
+                return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+            }
 
             return new SSEResponse(async () => {
                 res.write(
@@ -82,23 +93,35 @@ completionsController.post(
         }
 
         if (!stream) {
-            const completion = await completionsService.completions(body);
-            const tokens = completion.usage.total_tokens;
-            await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
+            try {
+                const completion = await completionsService.completions(body);
+                
+                if (!completion || !completion.usage) {
+                    console.error(`[ Ошибка: completion или completion.usage не определены для модели ${model} ]`);
+                    return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+                }
+                
+                const tokens = completion.usage.total_tokens;
+                await completionsService.updateCompletionTokensByModel({ model, tokenId, tokens });
 
-            console.log(`[ обработка завершена для модели ${model}, токены израсходованы: ${tokens} ]`);
-            return new HttpResponse(200, completion);
+                console.log(`[ обработка завершена для модели ${model}, токены израсходованы: ${tokens} ]`);
+                return new HttpResponse(200, completion);
+            } catch (error) {
+                console.error(`[ Ошибка при выполнении модели ${model} ]:`, error.message);
+                return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+            }
         }
 
-        const completion = await completionsService.completions(body);
+        try {
+            const completion = await completionsService.completions(body);
 
-        return new SSEResponse(async () => {
+            return new SSEResponse(async () => {
 
-            if (!completion) {
-                res.write(SSEResponse.sendSSEEvent("[DONE]"));
-                res.end();
-                return;
-            }
+                if (!completion) {
+                    res.write(SSEResponse.sendSSEEvent("[DONE]"));
+                    res.end();
+                    return;
+                }
 
             
             for await (const chunk of completion) {
@@ -117,6 +140,10 @@ completionsController.post(
             res.write(SSEResponse.sendSSEEvent("[DONE]"));
             res.end();
         });
+        } catch (error) {
+            console.error(`[ Ошибка при выполнении потоковой модели ${model} ]:`, error.message);
+            return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+        }
     })
 );
 
@@ -139,10 +166,17 @@ completionsController.post(
 
         const messages = await dialogsService.getDialogWithSystem(userId, systemMessage, model);
 
-        const completion = await completionsService.completions({stream: false, model, messages});
-        const tokens = completion.usage.total_tokens;
+        try {
+            const completion = await completionsService.completions({stream: false, model, messages});
+            
+            if (!completion || !completion.usage) {
+                console.error(`[ Ошибка: completion или completion.usage не определены для модели ${model} ]`);
+                return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+            }
+            
+            const tokens = completion.usage.total_tokens;
 
-        await dialogsService.addMessageToDialog(userId, completion.choices[0].message.content);
+            await dialogsService.addMessageToDialog(userId, completion.choices[0].message.content);
 
         completion.usage.energy = await completionsService.updateCompletionTokensByModel({
             model,
@@ -151,6 +185,10 @@ completionsController.post(
         });
         console.log(`...завершение обработки для пользователя ${userId}, токены израсходованы: ${tokens} ]`);
         return new HttpResponse(200, completion);
+        } catch (error) {
+            console.error(`[ Ошибка при выполнении модели ${model} для пользователя ${userId} ]:`, error.message);
+            return new HttpResponse(500, { error: "Ошибка обработки запроса" });
+        }
     }),
 );
 
