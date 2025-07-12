@@ -206,15 +206,35 @@ export class CompletionsService {
         const errors = [];
         const requestId = Math.random().toString(36).substring(2, 15);
         
-        console.log(`[${requestId}] 🚀 Начинаем попытки подключения к провайдерам для модели ${params.model}`);
-        console.log(`[${requestId}] 📋 Доступные эндпоинты:`, endpoints.map(endpoint => llmsConfig[endpoint]?.modelName || endpoint));
+        console.log(`[${requestId}] 🚀 Starting connection attempts to providers for model ${params.model}`);
+        
+        // Show endpoints with their baseURL
+        const endpointsInfo = endpoints.map(endpoint => {
+            const config = llmsConfig[endpoint];
+            if (config) {
+                const baseURL = config.endpoint.baseURL || 'Unknown';
+                const shortURL = baseURL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                const modelName = config.modelName || endpoint;
+                return `${endpoint} → ${modelName} (${shortURL})`;
+            }
+            return endpoint;
+        });
+        console.log(`[${requestId}] 📋 Available endpoints:`, endpointsInfo);
         
         for (let i = 0; i < endpoints.length; i++) {
             const endpoint = endpoints[i];
-            const providerName = llmsConfig[endpoint]?.providerName || 'Unknown';
-            const modelName = llmsConfig[endpoint]?.modelName || endpoint;
+            const config = llmsConfig[endpoint];
             
-            console.log(`\n[${requestId}] 🔄 Попытка ${i + 1}/${endpoints.length}: ${providerName} (${modelName})`);
+            if (!config) {
+                console.log(`[${requestId}] ⚠️  Unknown endpoint: ${endpoint}`);
+                continue;
+            }
+            
+            const baseURL = config.endpoint.baseURL || 'Unknown';
+            const shortURL = baseURL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+            const modelName = config.modelName || endpoint;
+            
+            console.log(`\n[${requestId}] 🔄 Attempt ${i + 1}/${endpoints.length}: ${endpoint} → ${modelName} (${shortURL})`);
             
             try {
                 const lastMessage = params.messages[params.messages.length-1];
@@ -222,22 +242,22 @@ export class CompletionsService {
                     ? lastMessage.content.substring(0, 100) + (lastMessage.content.length > 100 ? '...' : '')
                     : JSON.stringify(lastMessage.content).substring(0, 100) + '...';
                 
-                console.log(`[${requestId}] 💬 Сообщение пользователя: "${messagePreview}"`);
+                console.log(`[${requestId}] 💬 User message: "${messagePreview}"`);
                 
-                const completionEndpoint = llmsConfig[endpoint].endpoint;
-                const model = llmsConfig[endpoint].modelName;
+                const completionEndpoint = config.endpoint;
                 
-                // Обработка сообщений только для deepseek-reasoner
+                // Special message processing only for deepseek-reasoner
                 let processedParams = {...params};
-                if (model === 'deepseek-reasoner') {
+                if (modelName === 'deepseek-reasoner') {
                     processedParams.messages = this.processDialogHistory(params.messages);
-                    console.log(`[${requestId}] 🔧 Применена специальная обработка для deepseek-reasoner`);
+                    console.log(`[${requestId}] 🔧 Applied special processing for deepseek-reasoner`);
                 }
                 
-                // Логируем параметры перед запросом
-                console.log(`[${requestId}] 📤 Отправляем запрос к ${providerName}:`, {
-                    provider: providerName,
-                    model: modelName,
+                // Log parameters before request
+                console.log(`[${requestId}] 📤 Sending request to ${shortURL}:`, {
+                    endpoint: endpoint,
+                    targetModel: modelName,
+                    actualModel: modelName,
                     messagesCount: processedParams.messages.length,
                     stream: processedParams.stream,
                     timestamp: new Date().toISOString()
@@ -249,44 +269,44 @@ export class CompletionsService {
                 try {
                     response = await completionEndpoint.chat.completions.create({
                         ...processedParams,
-                        model
+                        model: modelName
                     });
                     
                     const responseTime = Date.now() - startTime;
-                    console.log(`[${requestId}] ✅ Успешный ответ от ${providerName} за ${responseTime}ms`);
+                    console.log(`[${requestId}] ✅ Successful response from ${shortURL} in ${responseTime}ms`);
                     
                 } catch (err) {
                     const responseTime = Date.now() - startTime;
-                    console.log(`[${requestId}] ❌ Ошибка от ${providerName} за ${responseTime}ms:`, err.message);
+                    console.log(`[${requestId}] ❌ Error from ${shortURL} in ${responseTime}ms:`, err.message);
                     
-                    // Детализация ошибок по типам
+                    // Error type details
                     if (err.message.includes('429')) {
-                        console.log(`[${requestId}] ⚠️  Превышен лимит запросов (429) у ${providerName}`);
+                        console.log(`[${requestId}] ⚠️  Rate limit exceeded (429) at ${shortURL}`);
                     } else if (err.message.includes('401')) {
-                        console.log(`[${requestId}] 🔑 Проблема с API ключом (401) у ${providerName}`);
+                        console.log(`[${requestId}] 🔑 API key issue (401) at ${shortURL}`);
                     } else if (err.message.includes('503')) {
-                        console.log(`[${requestId}] 🔧 Сервис недоступен (503) у ${providerName}`);
+                        console.log(`[${requestId}] 🔧 Service unavailable (503) at ${shortURL}`);
                     } else if (err.message.includes('500')) {
-                        console.log(`[${requestId}] 🛠️  Внутренняя ошибка сервера (500) у ${providerName}`);
+                        console.log(`[${requestId}] 🛠️  Internal server error (500) at ${shortURL}`);
                     }
                     
                     throw err;
                 }
 
-                // Обрабатываем ответ - если приходит как строка, парсим в JSON
+                // Process response - if it comes as string, parse to JSON
                 if (typeof response === 'string') {
                     try {
                         response = JSON.parse(response);
-                        console.log(`[${requestId}] 🔄 Ответ от ${providerName} был строкой, успешно распарсен`);
+                        console.log(`[${requestId}] 🔄 Response from ${shortURL} was string, successfully parsed`);
                     } catch (e) {
-                        console.log(`[${requestId}] ❌ Ошибка парсинга ответа от ${providerName}:`, e.message);
-                        throw new Error(`Не удалось распарсить ответ от ${providerName}`);
+                        console.log(`[${requestId}] ❌ Error parsing response from ${shortURL}:`, e.message);
+                        throw new Error(`Failed to parse response from ${shortURL}`);
                     }
                 }
 
-                // Детальное логирование успешного ответа
-                console.log(`[${requestId}] 📥 Детали ответа от ${providerName}:`, {
-                    provider: providerName,
+                // Detailed logging of successful response
+                console.log(`[${requestId}] 📥 Response details from ${shortURL}:`, {
+                    endpoint: endpoint,
                     model: response.model,
                     responseId: response.id,
                     hasUsage: !!response.usage,
@@ -302,45 +322,75 @@ export class CompletionsService {
                 if (response.choices?.[0]?.message?.content) {
                     const contentPreview = response.choices[0].message.content.substring(0, 150) + 
                         (response.choices[0].message.content.length > 150 ? '...' : '');
-                    console.log(`[${requestId}] 🤖 Ответ ИИ: "${contentPreview}"`);
+                    console.log(`[${requestId}] 🤖 AI response: "${contentPreview}"`);
                 }
 
-                console.log(`[${requestId}] 🎉 Успешно получили ответ от ${providerName}`);
+                console.log(`[${requestId}] 🎉 Successfully received response from ${shortURL}`);
                 return response;
                 
             } catch (e) {
-                const errorMsg = `Ошибка обращения к нейросети "${llmsConfig[endpoint]?.modelName || endpoint}": ${e.message}`;
-                console.log(`[${requestId}] ❌ ${errorMsg}`);
-                errors.push(errorMsg);
+                // Извлекаем реальное сообщение об ошибке от провайдера
+                let providerError = e.message;
                 
                 if (e.response && e.response.data) {
-                    console.log(`[${requestId}] 📋 Детали ошибки от ${providerName}:`, JSON.stringify(e.response.data, null, 2));
+                    console.log(`[${requestId}] 📋 Error details from ${shortURL}:`, JSON.stringify(e.response.data, null, 2));
+                    
+                    // Try to extract error message from provider response
+                    if (e.response.data.error && e.response.data.error.message) {
+                        providerError = e.response.data.error.message;
+                    } else if (e.response.data.message) {
+                        providerError = e.response.data.message;
+                    } else if (e.response.data.detail) {
+                        providerError = e.response.data.detail;
+                    }
                 }
+                // Brief description
+                let errorMessage = 'Unknown error';
+                if (providerError.includes('429')) errorMessage = 'Rate limit exceeded';
+                else if (providerError.includes('401')) errorMessage = 'API key expired';
+                else if (providerError.includes('503')) errorMessage = 'No available resources';
+                else if (providerError.includes('500')) errorMessage = 'Internal server error';
+                
+                errors.push({
+                    endpoint,
+                    modelName,
+                    shortURL,
+                    errorMessage,
+                    providerError
+                });
+                const errorMsg = `${endpoint} → ${modelName} (${shortURL}): ${errorMessage}\n    ${providerError}`;
+                console.log(`[${requestId}] ❌ ${errorMsg}`);
             }
         }
         
-        // Если все эндпоинты завершились с ошибкой
-        console.log(`\n[${requestId}] 💥 Все ${endpoints.length} провайдеров недоступны:`);
-        errors.forEach((error, index) => {
-            console.log(`[${requestId}]   ${index + 1}. ${error}`);
+        // If all endpoints failed - summary version
+        console.log(`\n[${requestId}] 💥 All ${endpoints.length} providers unavailable`);
+        
+        // Structured summary with details
+        console.log(`[${requestId}] 📊 Detailed summary:`);
+        errors.forEach((err, index) => {
+            console.log(`[${requestId}]   ${index + 1}. ${err.endpoint} → ${err.modelName} (${err.shortURL}): ${err.errorMessage}`);
+            console.log(`    ${err.providerError}`);
         });
         
-        throw new Error(`Все доступные эндпоинты недоступны. Ошибки: ${errors.join('; ')}`);
+        // Brief error message
+        const shortErrors = errors.map(err => err.errorMessage);
+        
+        throw new Error(`All providers unavailable: ${shortErrors.join(', ')}`);
     }
 
     async completions(params) {
         const requestId = Math.random().toString(36).substring(2, 15);
         const modelsChain = tryCompletionsConfig[params.model];
 
-        console.log(`\n[${requestId}] 🎯 Начинаем обработку запроса к модели ${params.model}`);
-        console.log(`[${requestId}] 🔗 Цепочка моделей:`, modelsChain || [params.model, `${params.model}_guo`, "gpt-auto"]);
+        console.log(`\n[${requestId}] 🎯 Starting request processing for model ${params.model}`);
+        console.log(`[${requestId}] 🔗 Model chain:`, modelsChain || [params.model, `${params.model}_guo`, "gpt-auto"]);
 
         try {
             const result = await this.tryEndpoints(params, modelsChain || [params.model, `${params.model}_guo`, "gpt-auto"]);
-            console.log(`[${requestId}] ✅ Запрос успешно обработан моделью ${params.model}`);
+            console.log(`[${requestId}] ✅ Request successfully processed by model ${params.model}`);
             return result;
         } catch (error) {
-            console.error(`[${requestId}] 💥 Ошибка в completions для модели ${params.model}:`, error.message);
             throw error;
         }
     }
