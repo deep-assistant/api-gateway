@@ -311,6 +311,7 @@ export const tryCompletionsConfig = {
     "gpt-3.5-turbo-0125_guo",
   ],
   "gpt-auto": [
+    "gpt-auto",
     "gpt-4o_go",
     "gpt-4o",
     "gpt-4o_guo",
