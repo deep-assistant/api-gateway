@@ -64,12 +64,12 @@ graph TB
     Repositories --> Database
     Services --> Providers
 
-    style Gateway fill:#e1f5ff
-    style Controllers fill:#fff4e1
-    style Services fill:#e8f5e9
-    style Repositories fill:#f3e5f5
-    style Database fill:#fce4ec
-    style Providers fill:#fff9c4
+    style Gateway fill:#0d47a1,stroke:#1976d2,stroke-width:3px,color:#fff
+    style Controllers fill:#e65100,stroke:#ff6f00,stroke-width:3px,color:#fff
+    style Services fill:#1b5e20,stroke:#4caf50,stroke-width:3px,color:#fff
+    style Repositories fill:#4a148c,stroke:#9c27b0,stroke-width:3px,color:#fff
+    style Database fill:#b71c1c,stroke:#f44336,stroke-width:3px,color:#fff
+    style Providers fill:#006064,stroke:#00bcd4,stroke-width:3px,color:#fff
 ```
 
 ---
@@ -768,17 +768,19 @@ sequenceDiagram
 flowchart TD
     A[New User Request] --> B[TokensService.getTokenByUserId]
     B --> C[TokensRepository.getTokenByUserId]
-    C --> D{Token<br/>Found?}
+    C --> D{Token Found?}
     D -->|Yes| E[Return existing token]
     D -->|No| F[TokensRepository.generateToken]
-    F --> G[Generate crypto-random<br/>32-char hex ID]
-    G --> H[Create token object:<br/>{id, user_id, tokens_gpt: 10000}]
+    F --> G["Generate crypto-random
+    32-char hex ID"]
+    G --> H["Create token object:
+    id, user_id, tokens_gpt: 10000"]
     H --> I[Save to tokens.json]
     I --> J[Return token object]
 
-    style D fill:#fff4e1
-    style F fill:#e8f5e9
-    style G fill:#e1f5ff
+    style D fill:#e65100,stroke:#ff6f00,stroke-width:2px,color:#fff
+    style F fill:#1b5e20,stroke:#4caf50,stroke-width:2px,color:#fff
+    style G fill:#01579b,stroke:#0277bd,stroke-width:2px,color:#fff
 ```
 
 ---
@@ -1349,9 +1351,18 @@ graph TB
     end
 
     subgraph Services[Services Layer]
-        CompService[CompletionsService<br/>• tryEndpoints<br/>• completions<br/>• updateTokens]
-        TokenService[TokensService<br/>• isAdminToken<br/>• hasBalance<br/>• getToken]
-        DialogService[DialogsService<br/>• getDialog<br/>• addMessage<br/>• clearDialog]
+        CompService["CompletionsService
+        • tryEndpoints
+        • completions
+        • updateTokens"]
+        TokenService["TokensService
+        • isAdminToken
+        • hasBalance
+        • getToken"]
+        DialogService["DialogsService
+        • getDialog
+        • addMessage
+        • clearDialog"]
     end
 
     subgraph Repositories[Repository Layer]
@@ -1360,8 +1371,10 @@ graph TB
     end
 
     subgraph Database[LowDB - JSON Database]
-        TokensDB[(tokens.json<br/>{tokens:[]})]
-        DialogsDB[(dialogs.json<br/>{dialogs:[]})]
+        TokensDB[("tokens.json
+        tokens: []")]
+        DialogsDB[("dialogs.json
+        dialogs: []")]
         FileSystem[File System: src/db/]
     end
 
@@ -1396,15 +1409,15 @@ graph TB
     FailoverChain --> ExternalProviders
     TokenService -.->|uses| CompService
 
-    style ClientLayer fill:#e3f2fd
-    style Middleware fill:#fff3e0
-    style Controllers fill:#e8f5e9
-    style RestWrapper fill:#fce4ec
-    style Services fill:#f3e5f5
-    style Repositories fill:#e0f2f1
-    style Database fill:#fff9c4
-    style FailoverChain fill:#ffe0b2
-    style ExternalProviders fill:#f1f8e9
+    style ClientLayer fill:#01579b,stroke:#0277bd,stroke-width:3px,color:#fff
+    style Middleware fill:#e65100,stroke:#ff6f00,stroke-width:3px,color:#fff
+    style Controllers fill:#1b5e20,stroke:#4caf50,stroke-width:3px,color:#fff
+    style RestWrapper fill:#880e4f,stroke:#c2185b,stroke-width:3px,color:#fff
+    style Services fill:#4a148c,stroke:#9c27b0,stroke-width:3px,color:#fff
+    style Repositories fill:#004d40,stroke:#00897b,stroke-width:3px,color:#fff
+    style Database fill:#b71c1c,stroke:#f44336,stroke-width:3px,color:#fff
+    style FailoverChain fill:#e65100,stroke:#ff9800,stroke-width:3px,color:#fff
+    style ExternalProviders fill:#33691e,stroke:#8bc34a,stroke-width:3px,color:#fff
 ```
 
 ---
