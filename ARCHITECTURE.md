@@ -2,10 +2,10 @@
 
 ## Overview
 
-The API Gateway is a Node.js/Express-based microservice that serves as a proxy and management layer for multiple LLM (Large Language Model) providers. It provides unified API endpoints, token-based authentication, usage tracking, and automatic failover between multiple AI service providers.
+The API Gateway is a Node.js/Express-based microservice that serves as a proxy and management layer for multiple LLM (Large Language Model) providers. It provides unified API endpoints, token-based authentication, usage billing, and automatic failover between multiple AI service providers.
 
 **Version**: 1.0.0
-**License**: UNLICENSED
+**License**: Unlicense (public domain)
 **Runtime**: Node.js 18+
 **Module System**: ES Modules (type: "module")
 
@@ -15,50 +15,61 @@ The API Gateway is a Node.js/Express-based microservice that serves as a proxy a
 
 ### High-Level Architecture
 
-```
-┌─────────────┐
-│   Clients   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────────────────────────────────┐
-│           API Gateway (Express)              │
-│  ┌────────────────────────────────────────┐ │
-│  │         Controllers Layer              │ │
-│  │  • completions • tokens • dialogs     │ │
-│  │  • transcriptions • speech • referral │ │
-│  └────────────┬───────────────────────────┘ │
-│               │                              │
-│  ┌────────────▼───────────────────────────┐ │
-│  │         Services Layer                  │ │
-│  │  • CompletionsService                  │ │
-│  │  • TokensService                       │ │
-│  │  • DialogsService                      │ │
-│  │  • ReferralService                     │ │
-│  │  • SystemMessageService                │ │
-│  └────────────┬───────────────────────────┘ │
-│               │                              │
-│  ┌────────────▼───────────────────────────┐ │
-│  │      Repository Layer (Data Access)     │ │
-│  │  • TokensRepository                    │ │
-│  │  • DialogsRepository                   │ │
-│  │  • ReferralRepository                  │ │
-│  └────────────┬───────────────────────────┘ │
-│               │                              │
-│  ┌────────────▼───────────────────────────┐ │
-│  │      Database Layer (LowDB/JSON)        │ │
-│  │  • tokens.json                         │ │
-│  │  • dialogs.json                        │ │
-│  │  • referrals.json                      │ │
-│  │  • user_tokens.json                    │ │
-│  └────────────────────────────────────────┘ │
-└─────────────────────────────────────────────┘
-       │      │       │        │
-       ▼      ▼       ▼        ▼
-┌──────────┬──────────┬──────────┬──────────┐
-│ OpenAI   │ DeepSeek │OpenRouter│ DeepInfra│
-│ Original │          │          │          │
-└──────────┴──────────┴──────────┴──────────┘
+```mermaid
+graph TB
+    Clients[Clients]
+
+    subgraph Gateway[API Gateway - Express]
+        subgraph Controllers[Controllers Layer]
+            CC[completions]
+            TC[tokens]
+            DC[dialogs]
+            TRC[transcriptions]
+            SC[speech]
+            RC[referral]
+        end
+
+        subgraph Services[Services Layer]
+            CS[CompletionsService]
+            TS[TokensService]
+            DS[DialogsService]
+            RS[ReferralService]
+            SMS[SystemMessageService]
+        end
+
+        subgraph Repositories[Repository Layer]
+            TR[TokensRepository]
+            DR[DialogsRepository]
+            RR[ReferralRepository]
+        end
+
+        subgraph Database[Database Layer - LowDB/JSON]
+            TDB[(tokens.json)]
+            DDB[(dialogs.json)]
+            REFA[(referrals.json)]
+            UTB[(user_tokens.json)]
+        end
+    end
+
+    subgraph Providers[External LLM Providers]
+        OAI[OpenAI Original]
+        DS_P[DeepSeek]
+        OR[OpenRouter]
+        DI[DeepInfra]
+    end
+
+    Clients --> Controllers
+    Controllers --> Services
+    Services --> Repositories
+    Repositories --> Database
+    Services --> Providers
+
+    style Gateway fill:#e1f5ff
+    style Controllers fill:#fff4e1
+    style Services fill:#e8f5e9
+    style Repositories fill:#f3e5f5
+    style Database fill:#fce4ec
+    style Providers fill:#fff9c4
 ```
 
 ---
@@ -680,84 +691,94 @@ Get referral count for user.
 
 ### 1. Chat Completion Flow
 
-```
-Client Request
-    ↓
-completionsController.post("/v1/chat/completions")
-    ↓
-Token Validation (isAdminToken, isHasBalanceToken)
-    ↓
-CompletionsService.completions(params)
-    ↓
-CompletionsService.tryEndpoints(params, modelChain)
-    ↓
-Loop through provider chain:
-  - Try provider 1 (e.g., gpt-4o_go)
-    ├─ Success → Return response
-    └─ Failure → Try next
-  - Try provider 2 (e.g., gpt-4o)
-    ├─ Success → Return response
-    └─ Failure → Try next
-  - ... continue until success or all fail
-    ↓
-Process Response
-    ↓
-CompletionsService.updateCompletionTokensByModel()
-    ↓
-Calculate energy: tokens / conversionRate * (1 + profitMargin)
-    ↓
-TokensRepository.updateTokenByUserId() - Deduct balance
-    ↓
-Return response to client
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller as completionsController
+    participant TokenService as TokensService
+    participant CompService as CompletionsService
+    participant Provider1 as Provider 1<br/>(gpt-4o_go)
+    participant Provider2 as Provider 2<br/>(gpt-4o)
+    participant Repository as TokensRepository
+
+    Client->>Controller: POST /v1/chat/completions
+    Controller->>TokenService: isAdminToken()
+    Controller->>TokenService: isHasBalanceToken()
+    Controller->>CompService: completions(params)
+    CompService->>CompService: tryEndpoints(params, modelChain)
+
+    CompService->>Provider1: Try provider 1
+    alt Provider 1 Success
+        Provider1-->>CompService: Response
+    else Provider 1 Failure
+        Provider1-->>CompService: Error
+        CompService->>Provider2: Try provider 2
+        alt Provider 2 Success
+            Provider2-->>CompService: Response
+        else Provider 2 Failure
+            Provider2-->>CompService: Error
+            Note over CompService: Continue chain...<br/>or throw if all fail
+        end
+    end
+
+    CompService->>CompService: updateCompletionTokensByModel()
+    Note over CompService: Calculate energy:<br/>tokens / rate * (1 + margin)
+    CompService->>Repository: updateTokenByUserId()<br/>(Deduct balance)
+    CompService-->>Controller: Response
+    Controller-->>Client: Return response
 ```
 
 ### 2. Dialog-based Completion Flow
 
-```
-Client Request
-    ↓
-completionsController.post("/completions")
-    ↓
-Token Validation (isValidMasterToken)
-    ↓
-TokensService.getTokenByUserId(userId)
-    ↓
-DialogsService.addMessageToDialog(userId, content)
-    ↓
-DialogsRepository.addMessageToDialog()
-    ↓
-DialogsService.getDialogWithSystem(userId, systemMessage)
-    ↓
-Build messages array:
-  - [system message, ...dialog history]
-    ↓
-CompletionsService.completions({model, messages})
-    ↓
-[Same failover flow as above]
-    ↓
-DialogsService.addMessageToDialog(userId, aiResponse)
-    ↓
-Return response to client
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller as completionsController
+    participant TokenService as TokensService
+    participant DialogService as DialogsService
+    participant DialogRepo as DialogsRepository
+    participant CompService as CompletionsService
+
+    Client->>Controller: POST /completions
+    Controller->>TokenService: isValidMasterToken()
+    Controller->>TokenService: getTokenByUserId(userId)
+    TokenService-->>Controller: token object
+
+    Controller->>DialogService: addMessageToDialog(userId, content)
+    DialogService->>DialogRepo: addMessageToDialog()
+    DialogRepo-->>DialogService: saved
+
+    Controller->>DialogService: getDialogWithSystem(userId, systemMessage)
+    Note over DialogService: Build messages array:<br/>[system, ...history]
+    DialogService-->>Controller: messages[]
+
+    Controller->>CompService: completions({model, messages})
+    Note over CompService: Same failover flow<br/>as previous diagram
+    CompService-->>Controller: completion
+
+    Controller->>DialogService: addMessageToDialog(userId, aiResponse)
+    DialogService->>DialogRepo: addMessageToDialog()
+
+    Controller-->>Client: Return response
 ```
 
 ### 3. Token Management Flow
 
-```
-New User Request
-    ↓
-TokensService.getTokenByUserId(userId)
-    ↓
-TokensRepository.getTokenByUserId(userId)
-    ↓
-Token not found?
-    ↓
-TokensRepository.generateToken(userId, 10000)
-    ↓
-Generate crypto-random 32-char hex ID
-    ↓
-Save to tokens.json
-    ↓
-Return token object {id, user_id, tokens_gpt}
+```mermaid
+flowchart TD
+    A[New User Request] --> B[TokensService.getTokenByUserId]
+    B --> C[TokensRepository.getTokenByUserId]
+    C --> D{Token<br/>Found?}
+    D -->|Yes| E[Return existing token]
+    D -->|No| F[TokensRepository.generateToken]
+    F --> G[Generate crypto-random<br/>32-char hex ID]
+    G --> H[Create token object:<br/>{id, user_id, tokens_gpt: 10000}]
+    H --> I[Save to tokens.json]
+    I --> J[Return token object]
+
+    style D fill:#fff4e1
+    style F fill:#e8f5e9
+    style G fill:#e1f5ff
 ```
 
 ---
@@ -1044,7 +1065,7 @@ POST /token?masterToken=...&userId=user_123
 
 ### Optimization Opportunities
 
-1. **Database**: Migrate to PostgreSQL/MongoDB for > 10k users
+1. **Database**: Migrate to [links-notation](https://github.com/link-foundation/links-notation) (file-based human-readable) or [link-cli](https://github.com/link-foundation/link-cli) (binary file database with high efficiency) for > 10k users
 2. **Caching**: Add Redis for token lookups
 3. **Clustering**: Use PM2 or k8s for horizontal scaling
 4. **Rate Limiting**: Add Redis-backed rate limiter
@@ -1282,7 +1303,13 @@ app.use("/", myController);
 
 ## License
 
-UNLICENSED - Proprietary software, all rights reserved.
+This software is released into the **public domain** under the [Unlicense](https://unlicense.org).
+
+**Important**: The Unlicense is NOT the same as having no license or being "unlicensed". The Unlicense is a specific public domain dedication that explicitly grants everyone the freedom to use, modify, and distribute this software without restrictions.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this software, either in source code form or as a compiled binary, for any purpose, commercial or non-commercial, and by any means.
+
+For the full license text, see the [LICENSE](LICENSE) file or visit [unlicense.org](https://unlicense.org).
 
 ---
 
@@ -1294,91 +1321,90 @@ Deep.Assistant Team
 
 ## Architecture Diagram (Detailed)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Client Layer                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │ Web App  │  │ Mobile   │  │   CLI    │  │ External │   │
-│  │          │  │   App    │  │   Tool   │  │    API   │   │
-│  └─────┬────┘  └─────┬────┘  └─────┬────┘  └─────┬────┘   │
-└────────┼─────────────┼─────────────┼─────────────┼────────┘
-         │             │             │             │
-         └─────────────┴─────────────┴─────────────┘
-                           │
-                    HTTP/HTTPS (REST)
-                           │
-         ┌─────────────────▼─────────────────┐
-         │      Express.js Middleware        │
-         │  • CORS (allow all)               │
-         │  • body-parser (300MB limit)      │
-         │  • Logger (Pino)                  │
-         └─────────────────┬─────────────────┘
-                           │
-    ┌──────────────────────┼──────────────────────┐
-    │                      │                      │
-    ▼                      ▼                      ▼
-┌────────────┐     ┌────────────┐      ┌────────────┐
-│Completions │     │   Tokens   │      │  Dialogs   │
-│ Controller │     │ Controller │      │ Controller │
-└─────┬──────┘     └─────┬──────┘      └─────┬──────┘
-      │                  │                    │
-    ┌─▼──────────────────▼────────────────────▼───┐
-    │            rest() Wrapper                    │
-    │  • Exception handling                        │
-    │  • HttpResponse/SSEResponse routing          │
-    │  • Consistent error formatting               │
-    └──────────────────────┬───────────────────────┘
-                           │
-    ┌──────────────────────┼──────────────────────┐
-    │                      │                      │
-    ▼                      ▼                      ▼
-┌─────────────┐    ┌──────────────┐    ┌──────────────┐
-│Completions  │    │   Tokens     │    │   Dialogs    │
-│  Service    │◄───│   Service    │    │   Service    │
-│             │    │              │    │              │
-│• tryEndpoints│   │• isAdminToken│   │• getDialog   │
-│• completions │   │• hasBalance  │   │• addMessage  │
-│• updateTokens│   │• getToken    │   │• clearDialog │
-└──────┬──────┘    └──────┬───────┘    └──────┬───────┘
-       │                  │                    │
-       │                  │                    │
-    ┌──▼──────────────────▼────────────────────▼───┐
-    │           Repository Layer                    │
-    │  ┌─────────────┐  ┌─────────────┐           │
-    │  │   Tokens    │  │   Dialogs   │           │
-    │  │ Repository  │  │ Repository  │           │
-    │  └──────┬──────┘  └──────┬──────┘           │
-    └─────────┼─────────────────┼──────────────────┘
-              │                 │
-    ┌─────────▼─────────────────▼──────────────────┐
-    │         LowDB (JSON Database)                 │
-    │  ┌─────────────┐  ┌─────────────┐           │
-    │  │tokens.json  │  │dialogs.json │           │
-    │  │             │  │             │           │
-    │  │{tokens:[]}  │  │{dialogs:[]} │           │
-    │  └─────────────┘  └─────────────┘           │
-    │         ↕ File System (src/db/)              │
-    └──────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph ClientLayer[Client Layer]
+        WebApp[Web App]
+        MobileApp[Mobile App]
+        CLI[CLI Tool]
+        ExternalAPI[External API]
+    end
 
-    ┌──────────────────────────────────────────────┐
-    │       LLM Provider Failover Chain            │
-    │                                              │
-    │  Request → Provider 1 (gpt-4o_go)           │
-    │               ↓ Fail                         │
-    │            Provider 2 (gpt-4o)               │
-    │               ↓ Fail                         │
-    │            Provider 3 (gpt-4o_guo)           │
-    │               ↓ Fail                         │
-    │            Provider 4 (deepseek)             │
-    │               ↓ Success                      │
-    │            Response ←                        │
-    └──────────────────────────────────────────────┘
+    subgraph Middleware[Express.js Middleware]
+        CORS[CORS - allow all]
+        BodyParser[body-parser - 300MB limit]
+        Logger[Logger - Pino]
+    end
 
-External API Providers:
-┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│ OpenAI   │ │ DeepSeek │ │OpenRouter│ │DeepInfra │
-│ Official │ │          │ │          │ │          │
-└──────────┘ └──────────┘ └──────────┘ └──────────┘
+    subgraph Controllers[Controllers Layer]
+        CompController[Completions Controller]
+        TokenController[Tokens Controller]
+        DialogController[Dialogs Controller]
+    end
+
+    subgraph RestWrapper[rest - Wrapper]
+        ExceptionHandler[Exception handling]
+        ResponseRouter[HttpResponse/SSEResponse routing]
+        ErrorFormatter[Consistent error formatting]
+    end
+
+    subgraph Services[Services Layer]
+        CompService[CompletionsService<br/>• tryEndpoints<br/>• completions<br/>• updateTokens]
+        TokenService[TokensService<br/>• isAdminToken<br/>• hasBalance<br/>• getToken]
+        DialogService[DialogsService<br/>• getDialog<br/>• addMessage<br/>• clearDialog]
+    end
+
+    subgraph Repositories[Repository Layer]
+        TokenRepo[Tokens Repository]
+        DialogRepo[Dialogs Repository]
+    end
+
+    subgraph Database[LowDB - JSON Database]
+        TokensDB[(tokens.json<br/>{tokens:[]})]
+        DialogsDB[(dialogs.json<br/>{dialogs:[]})]
+        FileSystem[File System: src/db/]
+    end
+
+    subgraph FailoverChain[LLM Provider Failover Chain]
+        P1[Provider 1: gpt-4o_go]
+        P2[Provider 2: gpt-4o]
+        P3[Provider 3: gpt-4o_guo]
+        P4[Provider 4: deepseek]
+    end
+
+    subgraph ExternalProviders[External API Providers]
+        OpenAI[OpenAI Official]
+        DeepSeek[DeepSeek]
+        OpenRouter[OpenRouter]
+        DeepInfra[DeepInfra]
+    end
+
+    ClientLayer -->|HTTP/HTTPS REST| Middleware
+    Middleware --> Controllers
+    Controllers --> RestWrapper
+    RestWrapper --> Services
+    Services --> Repositories
+    Repositories --> Database
+    Database -.->|File I/O| FileSystem
+
+    Services --> FailoverChain
+    P1 -->|Fail| P2
+    P2 -->|Fail| P3
+    P3 -->|Fail| P4
+    P4 -->|Success| Services
+
+    FailoverChain --> ExternalProviders
+    TokenService -.->|uses| CompService
+
+    style ClientLayer fill:#e3f2fd
+    style Middleware fill:#fff3e0
+    style Controllers fill:#e8f5e9
+    style RestWrapper fill:#fce4ec
+    style Services fill:#f3e5f5
+    style Repositories fill:#e0f2f1
+    style Database fill:#fff9c4
+    style FailoverChain fill:#ffe0b2
+    style ExternalProviders fill:#f1f8e9
 ```
 
 ---
