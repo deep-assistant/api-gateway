@@ -8,8 +8,9 @@ const referralController = express.Router();
 referralController.post(
   "/referral",
   rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
-    
+    const masterToken = tokensService.getMasterTokenFromRequest(req);
+    await tokensService.isValidMasterToken(masterToken);
+
     // Фикс: Обработка "None" и пустых значений
     let referralId = req.query.referralId?.trim() || null;
     if (referralId === "None" || referralId === "null") referralId = null;
@@ -24,7 +25,8 @@ referralController.post(
 referralController.get(
   "/referral",
   rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
+    const masterToken = tokensService.getMasterTokenFromRequest(req);
+    await tokensService.isValidMasterToken(masterToken);
     return new HttpResponse(200, await referralService.getReferral(req.query.userId));
   })
 );
