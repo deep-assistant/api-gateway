@@ -11,6 +11,7 @@ import referralController from "./controllers/referralController.js";
 import dialogsController from "./controllers/dialogsController.js";
 import transcriptionsController from "./controllers/transcriptionsController.js";
 import speechController from "./controllers/speechController.js";
+import modelsController from "./controllers/modelsController.js";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -26,6 +27,7 @@ app.use("/", referralController);
 app.use("/", transcriptionsController);
 app.use("/", speechController);
 app.use("/", dialogsController);
+app.use("/", modelsController);
 
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
