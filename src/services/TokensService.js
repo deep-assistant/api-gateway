@@ -67,4 +67,37 @@ export class TokensService {
   getTokenFromAuthorization(authorization) {
     return authorization.split("Bearer ")[1];
   }
+
+  /**
+   * Extract master token from request, supporting both Authorization header and query parameter.
+   * Priority: Authorization header > query parameter (deprecated)
+   * @param {Request} req - Express request object
+   * @returns {string} Master token
+   * @throws {HttpException} If no token is provided
+   */
+  getMasterTokenFromRequest(req) {
+    // Priority 1: Check Authorization header (recommended)
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      if (authHeader.startsWith('Bearer ')) {
+        return authHeader.split('Bearer ')[1];
+      }
+      // Handle case where "Bearer " prefix is missing
+      console.log('⚠️ [WARNING] Authorization header present but missing "Bearer " prefix');
+    }
+
+    // Priority 2: Fall back to query parameter (deprecated)
+    if (req.query.masterToken) {
+      console.log('⚠️ [DEPRECATED] Using masterToken in query parameter is deprecated and will be removed in v2.0.0.');
+      console.log('   Please migrate to using Authorization header: "Authorization: Bearer <token>"');
+      console.log('   See documentation: https://github.com/deep-assistant/api-gateway#authentication');
+      return req.query.masterToken;
+    }
+
+    // No token provided
+    throw new HttpException(
+      401,
+      "Missing authentication token. Please provide Authorization header: 'Authorization: Bearer <token>'"
+    );
+  }
 }

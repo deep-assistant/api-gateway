@@ -211,8 +211,9 @@ completionsController.post(
     "/completions",
     rest(async ({req}) => {
         const requestId = Math.random().toString(36).substring(2, 15);
-        
-        await tokensService.isValidMasterToken(req.query.masterToken);
+
+        const masterToken = tokensService.getMasterTokenFromRequest(req);
+        await tokensService.isValidMasterToken(masterToken);
         console.log(`[${requestId}] 📨 POST /completions`);
 
         const body = req.body;

@@ -17,7 +17,8 @@ dialogsController.delete(
 dialogsController.get(
   "/dialog-history",
   rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
+    const masterToken = tokensService.getMasterTokenFromRequest(req);
+    await tokensService.isValidMasterToken(masterToken);
     const token = await tokensService.getTokenByUserId(req.query.dialogName);
 
 

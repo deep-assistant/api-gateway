@@ -9,7 +9,8 @@ const systemMessagesController = express.Router();
 systemMessagesController.post(
   "/system-message",
   rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
+    const masterToken = tokensService.getMasterTokenFromRequest(req);
+    await tokensService.isValidMasterToken(masterToken);
 
     return new HttpResponse(
       200,
@@ -21,7 +22,8 @@ systemMessagesController.post(
 systemMessagesController.get(
   "/system-message",
   rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
+    const masterToken = tokensService.getMasterTokenFromRequest(req);
+    await tokensService.isValidMasterToken(masterToken);
 
     return new HttpResponse(200, await systemMessageService.getSystemMessage(String(req.query.userId)));
   }),

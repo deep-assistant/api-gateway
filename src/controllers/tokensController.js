@@ -9,7 +9,8 @@ const tokensController = express.Router();
 tokensController.get(
   "/token",
   rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
+    const masterToken = tokensService.getMasterTokenFromRequest(req);
+    await tokensService.isValidMasterToken(masterToken);
 
     return new HttpResponse(200, await tokensService.getTokenByUserId(req.query.userId));
   }),
@@ -18,7 +19,8 @@ tokensController.get(
 tokensController.get(
   "/token/has",
   rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
+    const masterToken = tokensService.getMasterTokenFromRequest(req);
+    await tokensService.isValidMasterToken(masterToken);
 
     const hasUser = await tokensService.hasUserToken(req.query.userId);
     return new HttpResponse(200, { hasUser });
@@ -28,7 +30,8 @@ tokensController.get(
 tokensController.put(
   "/token",
   rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
+    const masterToken = tokensService.getMasterTokenFromRequest(req);
+    await tokensService.isValidMasterToken(masterToken);
 
     const { operation, amount } = req.body;
 
@@ -41,7 +44,8 @@ tokensController.put(
 tokensController.post(
   "/token",
   rest(async ({ req }) => {
-    await tokensService.isValidMasterToken(req.query.masterToken);
+    const masterToken = tokensService.getMasterTokenFromRequest(req);
+    await tokensService.isValidMasterToken(masterToken);
 
     return new HttpResponse(200, await tokensService.regenerateToken(req.query.userId));
   }),
