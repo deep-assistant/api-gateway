@@ -9,6 +9,17 @@ The API Gateway is a Node.js/Express-based microservice that serves as a proxy a
 **Runtime**: Node.js 18+
 **Module System**: ES Modules (type: "module")
 
+## Cursor IDE Support
+
+The API Gateway is fully compatible with Cursor IDE and other OpenAI-compatible clients. See [CURSOR_SETUP.md](./CURSOR_SETUP.md) for detailed setup instructions.
+
+**Key Features for Cursor:**
+- OpenAI-compatible `/v1/chat/completions` endpoint
+- `/v1/models` endpoint for model discovery
+- Support for streaming and non-streaming responses
+- Access to 40+ models from multiple providers
+- Automatic failover for high reliability
+
 ---
 
 ## System Architecture
@@ -459,6 +470,66 @@ Legacy utility for file-based database operations (mostly superseded by reposito
 ---
 
 ## API Endpoints
+
+### Models
+
+#### `GET /v1/models`
+List all available models in OpenAI-compatible format.
+
+**Authentication**: None required (public endpoint)
+
+**Response**:
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-4o",
+      "object": "model",
+      "created": 1234567890,
+      "owned_by": "openai"
+    },
+    {
+      "id": "claude-sonnet-4",
+      "object": "model",
+      "created": 1234567890,
+      "owned_by": "anthropic"
+    }
+  ]
+}
+```
+
+**Features**:
+- Returns unique models (filters out provider variants like `_go`, `_guo`)
+- Sorted alphabetically by model ID
+- Compatible with Cursor IDE and other OpenAI clients
+
+#### `GET /v1/models/:model`
+Get information about a specific model.
+
+**Authentication**: None required (public endpoint)
+
+**Response**:
+```json
+{
+  "id": "gpt-4o",
+  "object": "model",
+  "created": 1234567890,
+  "owned_by": "openai"
+}
+```
+
+**Error Response** (404):
+```json
+{
+  "error": {
+    "message": "The model 'invalid-model' does not exist",
+    "type": "invalid_request_error",
+    "param": null,
+    "code": "model_not_found"
+  }
+}
+```
 
 ### Completions
 
