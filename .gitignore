@@ -9,10 +9,9 @@ Dockerfile
 docker-compose.test.yml
 package-lock.json
 node_modules
-letsencrypt/acme.json
+letsencrypt/
 db/user_tokens.json
 db/dialogs.json
-docker-compose.prod.yml
 acme.json
 .prettierrc copy.js
 logs
