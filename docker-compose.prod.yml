@@ -1,0 +1,153 @@
+version: '3.9'
+
+services:
+  api-gateway:
+    build: .
+    container_name: api-gateway-prod
+    volumes:
+      - ./src/db:/usr/src/app/src/db
+      - ./src/logs:/usr/src/app/src/logs
+    environment:
+      - PORT=${PORT:-8088}
+      - ADMIN_FIRST=${ADMIN_FIRST}
+      - OPENAI_ORIGINAL_API_KEY=${OPENAI_ORIGINAL_API_KEY}
+      - OPENAI_ORIGINAL_BASE_URL=${OPENAI_ORIGINAL_BASE_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - FREE_OPENAI_KEY=${FREE_OPENAI_KEY}
+      - FREE_OPENAI_BASE_URL=${FREE_OPENAI_BASE_URL}
+      - AIGUOGUO_API_KEY=${AIGUOGUO_API_KEY}
+      - AIGUOGUO_BASE_URL=${AIGUOGUO_BASE_URL}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_BASE_URL=${OPENROUTER_BASE_URL}
+      - GQL_URN=${GQL_URN}
+      - GQL_SSL=${GQL_SSL}
+      - GQL_TOKEN=${GQL_TOKEN}
+      - SPACE_ID_ARGUMENT=${SPACE_ID_ARGUMENT}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+
+      # Router for domain 1: api.deep.assistant.run.place
+      - "traefik.http.routers.api-gateway-domain1.rule=Host(`${DOMAIN1}`)"
+      - "traefik.http.routers.api-gateway-domain1.entrypoints=websecure"
+      - "traefik.http.routers.api-gateway-domain1.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-gateway-domain1.service=api-gateway"
+
+      # Router for domain 2: api-deep-assistant.mooo.com
+      - "traefik.http.routers.api-gateway-domain2.rule=Host(`${DOMAIN2}`)"
+      - "traefik.http.routers.api-gateway-domain2.entrypoints=websecure"
+      - "traefik.http.routers.api-gateway-domain2.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-gateway-domain2.service=api-gateway"
+
+      # Router for domain 3: api-deep-assistant.yee.pw
+      - "traefik.http.routers.api-gateway-domain3.rule=Host(`${DOMAIN3}`)"
+      - "traefik.http.routers.api-gateway-domain3.entrypoints=websecure"
+      - "traefik.http.routers.api-gateway-domain3.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-gateway-domain3.service=api-gateway"
+
+      # Router for domain 4: assistant.yee.pw
+      - "traefik.http.routers.api-gateway-domain4.rule=Host(`${DOMAIN4}`)"
+      - "traefik.http.routers.api-gateway-domain4.entrypoints=websecure"
+      - "traefik.http.routers.api-gateway-domain4.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-gateway-domain4.service=api-gateway"
+
+      # Router for domain 5: api-deep-assistant.duckdns.org
+      - "traefik.http.routers.api-gateway-domain5.rule=Host(`${DOMAIN5}`)"
+      - "traefik.http.routers.api-gateway-domain5.entrypoints=websecure"
+      - "traefik.http.routers.api-gateway-domain5.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-gateway-domain5.service=api-gateway"
+
+      # Service definition (shared by all routers)
+      - "traefik.http.services.api-gateway.loadbalancer.server.port=${PORT:-8088}"
+
+      # HTTP to HTTPS redirect for domain 1
+      - "traefik.http.routers.api-gateway-domain1-http.rule=Host(`${DOMAIN1}`)"
+      - "traefik.http.routers.api-gateway-domain1-http.entrypoints=web"
+      - "traefik.http.routers.api-gateway-domain1-http.middlewares=redirect-to-https"
+
+      # HTTP to HTTPS redirect for domain 2
+      - "traefik.http.routers.api-gateway-domain2-http.rule=Host(`${DOMAIN2}`)"
+      - "traefik.http.routers.api-gateway-domain2-http.entrypoints=web"
+      - "traefik.http.routers.api-gateway-domain2-http.middlewares=redirect-to-https"
+
+      # HTTP to HTTPS redirect for domain 3
+      - "traefik.http.routers.api-gateway-domain3-http.rule=Host(`${DOMAIN3}`)"
+      - "traefik.http.routers.api-gateway-domain3-http.entrypoints=web"
+      - "traefik.http.routers.api-gateway-domain3-http.middlewares=redirect-to-https"
+
+      # HTTP to HTTPS redirect for domain 4
+      - "traefik.http.routers.api-gateway-domain4-http.rule=Host(`${DOMAIN4}`)"
+      - "traefik.http.routers.api-gateway-domain4-http.entrypoints=web"
+      - "traefik.http.routers.api-gateway-domain4-http.middlewares=redirect-to-https"
+
+      # HTTP to HTTPS redirect for domain 5
+      - "traefik.http.routers.api-gateway-domain5-http.rule=Host(`${DOMAIN5}`)"
+      - "traefik.http.routers.api-gateway-domain5-http.entrypoints=web"
+      - "traefik.http.routers.api-gateway-domain5-http.middlewares=redirect-to-https"
+
+    networks:
+      - traefik-network
+
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik-prod
+    command:
+      # Enable Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik-network"
+
+      # API and Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+
+      # Entry points
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+
+      # Let's Encrypt configuration
+      - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+
+      # Logging
+      - "--log.level=INFO"
+      - "--accesslog=true"
+
+    labels:
+      - "traefik.enable=true"
+
+      # Dashboard accessible via first domain
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN1}`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.middlewares=traefik-auth"
+
+      # Basic auth for dashboard (username: admin, password: change_this_password)
+      # Generate new password hash with: echo $(htpasswd -nB admin) | sed -e s/\\$/\\$\\$/g
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$2y$$05$$qnXuYQQZw0CrAYL8Y.PGEu6Ufb4U7g5xfXM1R1qC0n5y4qVJG8/EO"
+
+      # Redirect HTTP to HTTPS middleware
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+    restart: unless-stopped
+    networks:
+      - traefik-network
+
+networks:
+  traefik-network:
+    driver: bridge
+    name: traefik-network
