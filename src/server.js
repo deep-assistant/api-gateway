@@ -8,6 +8,9 @@ import systemMessagesController from "./contollers/systemMessagesController.js";
 import referralController from "./contollers/referralController.js";
 import transcriptionsController from "./contollers/transcriptionsController.js";
 import dialogsController from "./contollers/dialogsController.js";
+import transferController from "./controllers/transferController.js";
+
+import { recoveryService } from "./services/index.js";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -21,7 +24,12 @@ app.use("/", systemMessagesController);
 app.use("/", referralController);
 app.use("/", transcriptionsController);
 app.use("/", dialogsController);
+app.use("/", transferController);
+
+// Запустить Recovery Service
+recoveryService.start();
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Transfer system initialized`);
 });
