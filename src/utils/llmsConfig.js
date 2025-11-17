@@ -1,37 +1,37 @@
 import OpenAI from "openai";
 
 const openai_original = new OpenAI({
-  timeout: 50 * 1000,
+  timeout: 60 * 1000,
   apiKey: process.env.OPENAI_ORIGINAL_API_KEY,
   baseURL: process.env.OPENAI_ORIGINAL_BASE_URL,
 });
 
 const openai_goapi = new OpenAI({
-  timeout: 180 * 1000,
+  timeout: 60 * 1000,
   apiKey: process.env.OPENAI_API_KEY,
   baseURL: process.env.OPENAI_BASE_URL,
 });
 
 const openai_opensource = new OpenAI({
-  timeout: 50 * 1000,
+  timeout: 60 * 1000,
   apiKey: process.env.FREE_OPENAI_KEY,
   baseURL: process.env.FREE_OPENAI_BASE_URL,
 });
 
 const openai_aiguoguo = new OpenAI({
-  timeout: 50 * 1000,
+  timeout: 60 * 1000,
   apiKey: process.env.AIGUOGUO_API_KEY,
   baseURL: process.env.AIGUOGUO_BASE_URL,
 });
 
 const deepseek = new OpenAI({
-  timeout: 180 * 1000,
+  timeout: 60 * 1000,
   apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: process.env.DEEPSEEK_BASE_URL,
 });
 
 const openrouter = new OpenAI({
-  timeout: 180 * 1000,
+  timeout: 60 * 1000,
   apiKey: process.env.OPENROUTER_API_KEY,
   baseURL: process.env.OPENROUTER_BASE_URL,
 });
