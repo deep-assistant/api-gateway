@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  chatgpt_proxy_test:
+    build: .
+    container_name: chatgpt_proxy_test
+    volumes:
+      - ./src/db:/usr/src/app/src/db
+    environment:
+      - PORT=8089
+      - ADMIN_FIRST=YOUR_TEST_ADMIN_TOKEN_HERE
+      - AZURE_OPENAI_ENDPOINT_TTS=YOUR_AZURE_ENDPOINT
+      - AZURE_OPENAI_KEY_TTS=YOUR_AZURE_KEY
+      - OPENAI_API_KEY=YOUR_OPENAI_KEY
+      - OPENAI_BASE_URL=https://api.goapi.xyz/v1/
+      - AIGUOGUO_API_KEY=YOUR_AIGUOGUO_KEY
+      - AIGUOGUO_BASE_URL=https://api.aiguoguo199.com/v1/
+      - FREE_OPENAI_KEY=YOUR_FREE_OPENAI_KEY
+      - FREE_OPENAI_BASE_URL=https://api.deepinfra.com/v1/openai
+      - OPENAI_ORIGINAL_API_KEY=YOUR_OPENAI_ORIGINAL_KEY
+      - OPENAI_ORIGINAL_BASE_URL=https://api.openai.com/v1
+      - AIGUOGUO_CLAUDE_API_KEY=YOUR_CLAUDE_KEY
+      - AIGUOGUO_CLAUDE_BASE_URL=https://api.aiguoguo199.com/v1/
+      - DEEPSEEK_API_KEY=YOUR_DEEPSEEK_KEY
+      - DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+      - OPENROUTER_API_KEY=YOUR_OPENROUTER_KEY
+      - OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatgpt_proxy_test.rule=Host(`api-test.${HOST}`)"
+      - "traefik.http.routers.chatgpt_proxy_test.entrypoints=websecure"
+      - "traefik.http.routers.chatgpt_proxy_test.tls.certresolver=myresolver"
+    networks:
+      - trfk
+
+networks:
+  trfk:
+    driver: overlay
+    external: true
+
