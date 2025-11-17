@@ -4,6 +4,8 @@ services:
   chatgpt_proxy_test:
     build: .
     container_name: chatgpt_proxy_test
+    ports:
+      - "8089:8089"
     volumes:
       - ./src/db:/usr/src/app/src/db
     environment:
@@ -26,16 +28,4 @@ services:
       - OPENROUTER_API_KEY=YOUR_OPENROUTER_KEY
       - OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.chatgpt_proxy_test.rule=Host(`api-test.${HOST}`)"
-      - "traefik.http.routers.chatgpt_proxy_test.entrypoints=websecure"
-      - "traefik.http.routers.chatgpt_proxy_test.tls.certresolver=myresolver"
-    networks:
-      - trfk
-
-networks:
-  trfk:
-    driver: overlay
-    external: true
 
