@@ -45,7 +45,8 @@ transferController.get(
  *   senderUserId, 
  *   receiverUserId, 
  *   amount,
- *   senderData: { username, full_name } // Опционально для синхронизации
+ *   senderData: { username, full_name }, // Опционально для синхронизации
+ *   receiverData: { username, full_name } // Опционально для синхронизации
  * }
  */
 transferController.post(
@@ -69,6 +70,15 @@ transferController.post(
       await tokensService.tokensRepository.syncUserData(senderUserId, {
         username: senderData.username,
         full_name: senderData.full_name
+      });
+    }
+
+    // Синхронизация данных получателя перед переводом
+    const receiverData = req.body.receiverData;
+    if (receiverData && (receiverData.username || receiverData.full_name)) {
+      await tokensService.tokensRepository.syncUserData(receiverUserId, {
+        username: receiverData.username,
+        full_name: receiverData.full_name
       });
     }
 

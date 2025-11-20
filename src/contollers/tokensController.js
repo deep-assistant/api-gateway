@@ -3,6 +3,7 @@ import express from "express";
 import { rest } from "../rest/rest.js";
 import { completionsService, tokensService } from "../services/index.js";
 import { HttpResponse } from "../rest/HttpResponse.js";
+import { HttpException } from "../rest/HttpException.js";
 
 const tokensController = express.Router();
 
@@ -44,6 +45,34 @@ tokensController.post(
     await tokensService.isValidMasterToken(req.query.masterToken);
 
     return new HttpResponse(200, await tokensService.regenerateToken(req.query.userId));
+  }),
+);
+
+tokensController.get(
+  "/tokens",
+  rest(async ({ req }) => {
+    await tokensService.isValidMasterToken(req.query.masterToken);
+
+    const tokens = await tokensService.tokensRepository.getAllTokens();
+    return new HttpResponse(200, { tokens });
+  }),
+);
+
+tokensController.post(
+  "/tokens/sync",
+  rest(async ({ req }) => {
+    await tokensService.isValidMasterToken(req.query.masterToken);
+
+    const { userId, userData } = req.body;
+
+    if (!userId) {
+      throw new HttpException(400, "userId is required");
+    }
+
+    await tokensService.tokensRepository.syncUserData(userId, userData);
+    
+    const updatedToken = await tokensService.getTokenByUserId(userId);
+    return new HttpResponse(200, { success: true, token: updatedToken });
   }),
 );
 

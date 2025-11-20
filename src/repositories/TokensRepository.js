@@ -8,7 +8,7 @@ export class TokensRepository {
   }
 
   getAllTokens() {
-    return this.tokensDB.data;
+    return this.tokensDB.data.tokens || [];
   }
 
   async generateToken(user_id, tokens, username = null, full_name = null) {
@@ -52,10 +52,19 @@ export class TokensRepository {
     return this.tokensDB.data.tokens.find((token) => token.id === tokenId);
   }
 
-  async updateTokenByUserId(userId, token) {
-    await this.tokensDB.update(({ tokens }) => {
-      const foundToken = tokens.find((item) => item.user_id === userId);
-      Object.assign(foundToken, token);
+  async updateTokenByUserId(userId, updates) {
+    return await this.db.update((data) => {
+      const token = data.tokens.find((item) => item.user_id === userId);
+      if (token) {
+        // Обновляем только переданные поля, НЕ перезаписываем username/full_name
+        for (const key in updates) {
+          if (updates.hasOwnProperty(key)) {
+            token[key] = updates[key];
+          }
+        }
+        token.updated_at = new Date().toISOString();
+      }
+      return data;
     });
   }
 
