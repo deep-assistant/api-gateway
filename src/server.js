@@ -2,15 +2,15 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 
-import logger from "./logger.js";
+import completionsController from "./contollers/completionsController.js";
+import tokensController from "./contollers/tokensController.js";
+import systemMessagesController from "./contollers/systemMessagesController.js";
+import referralController from "./contollers/referralController.js";
+import transcriptionsController from "./contollers/transcriptionsController.js";
+import dialogsController from "./contollers/dialogsController.js";
+import transferController from "./controllers/transferController.js";
 
-import completionsController from "./controllers/completionsController.js";
-import tokensController from "./controllers/tokensController.js";
-import systemMessagesController from "./controllers/systemMessagesController.js";
-import referralController from "./controllers/referralController.js";
-import dialogsController from "./controllers/dialogsController.js";
-import transcriptionsController from "./controllers/transcriptionsController.js";
-import speechController from "./controllers/speechController.js";
+import { recoveryService } from "./services/index.js";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -26,15 +26,12 @@ app.use("/", referralController);
 app.use("/", transcriptionsController);
 app.use("/", speechController);
 app.use("/", dialogsController);
+app.use("/", transferController);
+
+// Запустить Recovery Service
+recoveryService.start();
 
 app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
-});
-
-// Глобальный обработчик ошибок
-process.on('uncaughtException', (err) => {
-  console.error('[UNCAUGHT EXCEPTION]', err);
-});
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[UNHANDLED REJECTION]', reason);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Transfer system initialized`);
 });
