@@ -82,16 +82,19 @@ export class TokensRepository {
   async getUserByUsername(username) {
     try {
       const data = await this.db.read();
-      const searchUsername = username.toLowerCase();
+      const searchInput = username.toLowerCase();
+      
+      // Убрать @ если есть для поиска по username
+      const searchWithoutAt = searchInput.startsWith('@') ? searchInput.substring(1) : searchInput;
       
       return data.tokens.find(token => {
-        // Поиск по полю username
-        if (token.username?.toLowerCase() === searchUsername) {
+        // Поиск по полю username (БЕЗ @)
+        if (token.username?.toLowerCase() === searchWithoutAt) {
           return true;
         }
         
-        // Поиск по user_id
-        if (token.user_id?.toLowerCase() === searchUsername) {
+        // Поиск по user_id (может быть число или строка)
+        if (token.user_id?.toLowerCase() === searchInput || token.user_id?.toLowerCase() === searchWithoutAt) {
           return true;
         }
         
@@ -99,11 +102,14 @@ export class TokensRepository {
         if (token.full_name) {
           const fullNameLower = token.full_name.toLowerCase();
           // Если full_name начинается с @, убираем @ и сравниваем
-          if (fullNameLower.startsWith('@') && fullNameLower.substring(1) === searchUsername) {
-            return true;
+          if (fullNameLower.startsWith('@')) {
+            const fullNameWithoutAt = fullNameLower.substring(1);
+            if (fullNameWithoutAt === searchWithoutAt) {
+              return true;
+            }
           }
           // Или если искомый username с @
-          if (fullNameLower === `@${searchUsername}`) {
+          if (fullNameLower === searchInput || fullNameLower === `@${searchWithoutAt}`) {
             return true;
           }
         }
@@ -113,13 +119,14 @@ export class TokensRepository {
     } catch (error) {
       // Fallback to old method
       const tokens = this.getAllTokens();
-      const searchUsername = username.toLowerCase();
+      const searchInput = username.toLowerCase();
+      const searchWithoutAt = searchInput.startsWith('@') ? searchInput.substring(1) : searchInput;
       
       return tokens.tokens.find(token => {
-        if (token.username?.toLowerCase() === searchUsername) return true;
-        if (token.user_id?.toLowerCase() === searchUsername) return true;
-        if (token.full_name?.toLowerCase() === `@${searchUsername}`) return true;
-        if (token.full_name?.toLowerCase().substring(1) === searchUsername) return true;
+        if (token.username?.toLowerCase() === searchWithoutAt) return true;
+        if (token.user_id?.toLowerCase() === searchInput || token.user_id?.toLowerCase() === searchWithoutAt) return true;
+        if (token.full_name?.toLowerCase() === `@${searchWithoutAt}`) return true;
+        if (token.full_name?.toLowerCase().substring(1) === searchWithoutAt) return true;
         return false;
       });
     }
